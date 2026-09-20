@@ -8,6 +8,13 @@ class UserCreate(BaseModel):
     rol: str = "cuidador"
 
 
+class UserUpdate(BaseModel):
+    nombre: str | None = None
+    email: EmailStr | None = None
+    rol: str | None = None
+    activo: bool | None = None
+
+
 class UserResponse(BaseModel):
     id: int
     nombre: str

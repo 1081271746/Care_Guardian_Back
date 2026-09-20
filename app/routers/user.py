@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from pwdlib import PasswordHash
 
 
@@ -60,5 +60,36 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
             status_code=404,
             detail="Usuario no encontrado"
         )
+
+    return user
+
+@router.put("/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db)
+):
+    user = db.get(User, user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    if user_data.nombre is not None:
+        user.nombre = user_data.nombre
+
+    if user_data.email is not None:
+        user.email = user_data.email
+
+    if user_data.rol is not None:
+        user.rol = user_data.rol
+
+    if user_data.activo is not None:
+        user.activo = user_data.activo
+
+    db.commit()
+    db.refresh(user)
 
     return user
