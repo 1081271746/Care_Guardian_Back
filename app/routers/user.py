@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
-from pwdlib import PasswordHash
+from app.core.security import hash_password
+
 
 
 router = APIRouter(
@@ -13,7 +14,6 @@ router = APIRouter(
     tags=["Users"]
 )
 
-password_hash = PasswordHash.recommended()
 
 
 @router.post("/")
@@ -21,7 +21,7 @@ def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
-    hashed_password = password_hash.hash(user_data.password)
+    hashed_password = hash_password(user_data.password)
 
     new_user = User(
         nombre=user_data.nombre,

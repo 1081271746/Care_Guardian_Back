@@ -7,6 +7,10 @@ class UserCreate(BaseModel):
     password: str
     rol: str = "cuidador"
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
 
 class UserUpdate(BaseModel):
     nombre: str | None = None
