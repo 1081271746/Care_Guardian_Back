@@ -1,5 +1,6 @@
 from app.routers.patient import router as patient_router
 from fastapi import FastAPI
+from app.models.patient_caregiver import PatientCaregiver
 
 from app.database.base import Base
 from app.database.connection import engine

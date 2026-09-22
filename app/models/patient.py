@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sqlalchemy import Boolean, Date, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -66,4 +67,10 @@ class Patient(Base):
         DateTime(timezone=True),
         nullable=False,
         default=datetime.utcnow
+    )
+
+    relaciones_cuidadores = relationship(
+        "PatientCaregiver",
+        back_populates="patient",
+        cascade="all, delete-orphan"
     )

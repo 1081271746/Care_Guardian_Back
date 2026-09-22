@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.models.patient_caregiver import PatientCaregiver
+from app.schemas.caregiver import CaregiverAssignmentCreate
 
 from app.database.connection import get_db
 from app.models.patient import Patient
@@ -146,4 +148,65 @@ def delete_patient(
 
     return {
         "mensaje": "Paciente eliminado correctamente"
+    }
+
+@router.post("/{patient_id}/caregivers")
+def assign_caregiver(
+    patient_id: int,
+    assignment: CaregiverAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    patient = db.get(Patient, patient_id)
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Paciente no encontrado"
+        )
+
+    user = db.get(User, assignment.user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+
+    if not user.activo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario está inactivo"
+        )
+
+    existing_assignment = db.query(PatientCaregiver).filter(
+        PatientCaregiver.patient_id == patient_id,
+        PatientCaregiver.user_id == assignment.user_id
+    ).first()
+
+    if existing_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario ya está asignado a este paciente"
+        )
+
+    new_assignment = PatientCaregiver(
+        patient_id=patient_id,
+        user_id=assignment.user_id,
+        rol=assignment.rol
+    )
+
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+
+    return {
+        "mensaje": "Cuidador asignado correctamente",
+        "asignacion": {
+            "id": new_assignment.id,
+            "patient_id": new_assignment.patient_id,
+            "user_id": new_assignment.user_id,
+            "rol": new_assignment.rol,
+            "fecha_asignacion": new_assignment.fecha_asignacion
+        }
     }
