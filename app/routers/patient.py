@@ -210,3 +210,39 @@ def assign_caregiver(
             "fecha_asignacion": new_assignment.fecha_asignacion
         }
     }
+@router.get("/{patient_id}/caregivers")
+def get_patient_caregivers(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    patient = db.get(Patient, patient_id)
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Paciente no encontrado"
+        )
+
+    caregivers = (
+        db.query(PatientCaregiver, User)
+        .join(
+            User,
+            PatientCaregiver.user_id == User.id
+        )
+        .filter(
+            PatientCaregiver.patient_id == patient_id
+        )
+        .all()
+    )
+
+    return [
+        {
+            "user_id": user.id,
+            "nombre": user.nombre,
+            "email": user.email,
+            "rol": assignment.rol
+        }
+        for assignment, user in caregivers
+    ]
+
