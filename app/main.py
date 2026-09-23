@@ -2,6 +2,8 @@ from app.routers.patient import router as patient_router
 from fastapi import FastAPI
 from app.models.patient_caregiver import PatientCaregiver
 from app.routers.medication import router as medication_router
+from app.models.appointment import Appointment
+from app.routers.appointment import router as appointment_router
 
 from app.database.base import Base
 from app.database.connection import engine
@@ -26,6 +28,7 @@ app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(patient_router)
 app.include_router(medication_router)
+app.include_router(appointment_router)
 
 @app.get("/")
 def inicio():
