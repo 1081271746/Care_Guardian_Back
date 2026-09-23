@@ -6,6 +6,7 @@ from app.database.base import Base
 from app.database.connection import engine
 from app.models.user import User
 from app.models.patient import Patient
+from app.models.medication import Medication
 from app.routers.user import router as user_router
 from app.routers.auth import router as auth_router
 
