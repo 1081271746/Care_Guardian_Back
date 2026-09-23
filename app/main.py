@@ -8,6 +8,7 @@ from app.models.symptom_record import SymptomRecord
 from app.routers.symptom_record import router as symptom_router
 from app.models.caregiver_note import CaregiverNote
 from app.routers.caregiver_note import router as caregiver_note_router
+from app.models.alert import Alert
 
 from app.database.base import Base
 from app.database.connection import engine
