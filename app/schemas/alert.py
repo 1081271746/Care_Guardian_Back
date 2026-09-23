@@ -69,6 +69,7 @@ class AlertUpdate(BaseModel):
 class AlertResponse(BaseModel):
     id: int
     patient_id: int
+    symptom_id: int | None
     tipo: str
     nivel: str
     titulo: str
