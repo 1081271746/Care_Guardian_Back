@@ -21,6 +21,7 @@ def analyze_symptoms(symptom) -> RiskAnalysisResult:
         elif symptom.nivel_dolor >= 5:
             score += 2
             factores.append("Dolor moderado")
+        
 
     # Temperatura
     if symptom.temperatura is not None:
