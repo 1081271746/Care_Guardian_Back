@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+from app.services.alert_generator import generate_alert_from_symptom
 from app.core.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.patient import Patient
@@ -71,7 +71,14 @@ def create_symptom_record(
     db.commit()
     db.refresh(new_record)
 
+    # Analizar automáticamente el nivel de riesgo
+    generate_alert_from_symptom(new_record, db)
+
     return new_record
+
+
+
+   
 
 
 @router.get(

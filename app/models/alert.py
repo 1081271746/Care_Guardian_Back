@@ -19,6 +19,12 @@ class Alert(Base):
         nullable=False
     )
 
+    symptom_id: Mapped[int | None] = mapped_column(
+    ForeignKey("symptom_records.id"),
+    nullable=True
+)
+
+
     tipo: Mapped[str] = mapped_column(
         String(50),
         nullable=False
