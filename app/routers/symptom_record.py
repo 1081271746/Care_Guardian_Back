@@ -78,9 +78,6 @@ def create_symptom_record(
 
 
 
-   
-
-
 @router.get(
     "/patients/{patient_id}",
     response_model=list[SymptomRecordResponse]
