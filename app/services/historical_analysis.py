@@ -13,7 +13,7 @@ class HistoricalAnalysisResult:
 def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     """
     Analiza los registros recientes de síntomas de un paciente
-    para detectar cambios o tendencias.
+    para detectar cambios y tendencias.
     """
 
     if not symptoms:
@@ -28,11 +28,20 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     score = 0
     tendencias = []
 
-    registros = list(reversed(symptoms))
+    # Si los registros reales tienen fecha_registro,
+    # los ordenamos del más antiguo al más reciente.
+    if all(hasattr(symptom, "fecha_registro") for symptom in symptoms):
+        registros = sorted(
+            symptoms,
+            key=lambda symptom: symptom.fecha_registro
+        )
+    else:
+        # En las pruebas respetamos el orden recibido.
+        registros = list(symptoms)
 
-    
+    # -------------------------------------------------
     # Tendencia del sueño
-    
+    # -------------------------------------------------
 
     sueno = [
         s.calidad_sueno
@@ -41,23 +50,26 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     ]
 
     if len(sueno) >= 2:
-        if sueno[-1] < sueno[0]:
-            diferencia = sueno[0] - sueno[-1]
+        sueno_inicial = sueno[0]
+        sueno_actual = sueno[-1]
 
-            if diferencia >= 3:
-                score += 2
-                tendencias.append(
-                    "Se observa un deterioro importante en la calidad del sueño."
-                )
-            elif diferencia >= 1:
-                score += 1
-                tendencias.append(
-                    "Se observa una disminución en la calidad del sueño."
-                )
+        diferencia = sueno_inicial - sueno_actual
 
-    
+        if diferencia >= 3:
+            score += 2
+            tendencias.append(
+                "Se observa un deterioro importante en la calidad del sueño."
+            )
+
+        elif diferencia >= 1:
+            score += 1
+            tendencias.append(
+                "Se observa una disminución en la calidad del sueño."
+            )
+
+    # -------------------------------------------------
     # Tendencia del dolor
-    
+    # -------------------------------------------------
 
     dolor = [
         s.nivel_dolor
@@ -66,23 +78,27 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     ]
 
     if len(dolor) >= 2:
-        if dolor[-1] > dolor[0]:
-            diferencia = dolor[-1] - dolor[0]
+        dolor_inicial = dolor[0]
+        dolor_actual = dolor[-1]
 
-            if diferencia >= 3:
-                score += 2
-                tendencias.append(
-                    "Se observa un aumento importante del nivel de dolor."
-                )
-            elif diferencia >= 1:
-                score += 1
-                tendencias.append(
-                    "Se observa un aumento del nivel de dolor."
-                )
+        diferencia = dolor_actual - dolor_inicial
 
-    
-    # Tendencia de temperatura
-    
+        if diferencia >= 3:
+            score += 2
+            tendencias.append(
+                "Se observa un aumento importante del nivel de dolor."
+            )
+
+        elif diferencia >= 1:
+            score += 1
+            tendencias.append(
+                "Se observa un aumento del nivel de dolor."
+            )
+
+    # -------------------------------------------------
+    # Temperatura actual
+    # -------------------------------------------------
+
     temperatura = [
         s.temperatura
         for s in registros
@@ -97,15 +113,16 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
             tendencias.append(
                 "Se registra una temperatura elevada."
             )
+
         elif ultima_temperatura >= 38:
             score += 2
             tendencias.append(
                 "Se registra una temperatura por encima de lo habitual."
             )
 
-    
-    # Apetito
-    
+    # -------------------------------------------------
+    # Apetito actual
+    # -------------------------------------------------
 
     apetitos = [
         s.apetito.lower()
@@ -121,13 +138,16 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
             tendencias.append(
                 "Se registra un apetito muy bajo."
             )
+
         elif ultimo_apetito == "bajo":
             score += 1
             tendencias.append(
                 "Se registra una disminución del apetito."
             )
 
-    # Estado de ánimo
+    # -------------------------------------------------
+    # Estado de ánimo actual
+    # -------------------------------------------------
 
     estados = [
         s.estado_animo.lower()
@@ -135,7 +155,7 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
         if s.estado_animo is not None
     ]
 
-    if len(estados) >= 2:
+    if estados:
         estado_actual = estados[-1]
 
         if estado_actual in ["decaído", "decaida"]:
@@ -143,13 +163,16 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
             tendencias.append(
                 "Se registra un estado de ánimo decaído."
             )
+
         elif estado_actual in ["triste", "ansioso", "ansiosa"]:
             score += 1
             tendencias.append(
                 "Se registra un cambio desfavorable en el estado de ánimo."
             )
 
-    # Determinar nivel
+    # -------------------------------------------------
+    # Determinar nivel de riesgo
+    # -------------------------------------------------
 
     if score >= 7:
         nivel = "alto"
