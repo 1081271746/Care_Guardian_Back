@@ -7,6 +7,8 @@ from app.models.patient import Patient
 from app.models.patient_caregiver import PatientCaregiver
 from app.models.caregiver_note import CaregiverNote
 from app.models.user import User
+from app.services.note_analysis import analyze_caregiver_note
+from app.services.alert_generator import generate_alert_from_note
 from app.schemas.caregiver_note import (
     CaregiverNoteCreate,
     CaregiverNoteUpdate,
@@ -64,6 +66,18 @@ def create_note(
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
+
+     # Analizar automáticamente la nota
+    analysis_result = analyze_caregiver_note(
+    new_note.contenido
+)
+
+    # Generar alerta si se detecta un riesgo
+    generate_alert_from_note(
+    new_note,
+    analysis_result,
+    db
+)
 
     return new_note
 

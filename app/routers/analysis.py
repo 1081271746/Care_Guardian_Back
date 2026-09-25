@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.services.alert_generator import generate_alert_from_history
 
 from app.core.dependencies import get_current_user
 from app.database.connection import get_db
@@ -76,11 +77,19 @@ def analyze_patient(
 
     result = analyze_patient_history(symptoms)
 
+    alert = generate_alert_from_history(
+    patient_id,
+    result,
+    db
+)
+
     return {
-        "patient_id": patient_id,
-        "registros_analizados": result.registros_analizados,
-        "score": result.score,
-        "nivel": result.nivel,
-        "tendencias": result.tendencias,
-        "recomendacion": result.recomendacion
-    }
+    "patient_id": patient_id,
+    "registros_analizados": result.registros_analizados,
+    "score": result.score,
+    "nivel": result.nivel,
+    "tendencias": result.tendencias,
+    "recomendacion": result.recomendacion,
+    "alerta_generada": alert is not None,
+    "alerta_id": alert.id if alert else None
+}

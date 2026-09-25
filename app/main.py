@@ -10,6 +10,8 @@ from app.models.caregiver_note import CaregiverNote
 from app.routers.caregiver_note import router as caregiver_note_router
 from app.models.alert import Alert
 from app.routers.alert import router as alert_router
+from app.routers.analysis import router as analysis_router
+from app.routers.dashboard import router as dashboard_router
 
 from app.database.base import Base
 from app.database.connection import engine
@@ -38,6 +40,8 @@ app.include_router(appointment_router)
 app.include_router(symptom_router)
 app.include_router(caregiver_note_router)
 app.include_router(alert_router)
+app.include_router(analysis_router)
+app.include_router(dashboard_router)
 
 @app.get("/")
 def inicio():

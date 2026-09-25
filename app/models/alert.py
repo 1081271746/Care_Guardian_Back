@@ -24,6 +24,11 @@ class Alert(Base):
     nullable=True
 )
 
+    note_id: Mapped[int | None] = mapped_column(
+    ForeignKey("caregiver_notes.id"),
+    nullable=True
+)
+
 
     tipo: Mapped[str] = mapped_column(
         String(50),
