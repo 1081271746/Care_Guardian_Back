@@ -9,6 +9,11 @@ from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.core.security import hash_password
 
 
+def require_self(user_id, current_user):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este usuario")
+
+
 
 router = APIRouter(
     prefix="/users",
@@ -28,7 +33,7 @@ def create_user(
         nombre=user_data.nombre,
         email=user_data.email,
         password_hash=hashed_password,
-        rol=user_data.rol
+        rol="cuidador"
     )
 
     db.add(new_user)
@@ -51,11 +56,13 @@ def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    users = db.query(User).all()
+    users = db.query(User).filter(User.id == current_user.id).all()
     return users
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db),
+             current_user: User = Depends(get_current_user)):
+    require_self(user_id, current_user)
     user = db.get(User, user_id)
 
     if user is None:
@@ -70,8 +77,12 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 def update_user(
     user_id: int,
     user_data: UserUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    require_self(user_id, current_user)
+    if user_data.rol is not None and user_data.rol != current_user.rol:
+        raise HTTPException(status_code=403, detail="No puedes cambiar tu rol")
     user = db.get(User, user_id)
 
     if user is None:
@@ -101,8 +112,10 @@ def update_user(
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    require_self(user_id, current_user)
     user = db.get(User, user_id)
 
     if user is None:

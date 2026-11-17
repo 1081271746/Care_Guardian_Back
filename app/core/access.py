@@ -1,0 +1,54 @@
+"""Object-level authorization shared by old and new patient routes."""
+from fastapi import Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from app.core.dependencies import get_current_user
+from app.database.connection import get_db
+from app.models.patient import Patient
+from app.models.patient_caregiver import PatientCaregiver
+from app.models.medication import Medication
+from app.models.appointment import Appointment
+from app.models.symptom_record import SymptomRecord
+from app.models.caregiver_note import CaregiverNote
+from app.models.alert import Alert
+
+
+def require_patient(db, user, patient_id, *, active=False):
+    assignment = db.query(PatientCaregiver).filter_by(
+        patient_id=patient_id, user_id=user.id
+    ).first()
+    # Do not disclose whether another caregiver's patient exists.
+    if assignment is None:
+        raise HTTPException(403, "No tienes acceso a este paciente")
+    patient = db.get(Patient, patient_id)
+    if patient is None:
+        raise HTTPException(404, "Paciente no encontrado")
+    if active and not patient.activo:
+        raise HTTPException(400, "El paciente está inactivo")
+    return patient
+
+
+def enforce_patient_scope(
+    request: Request, db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    params = request.path_params
+    def identifier(key):
+        try:
+            return int(params[key])
+        except (TypeError, ValueError):
+            raise HTTPException(422, "El identificador debe ser un número entero")
+    if "patient_id" in params:
+        require_patient(db, user, identifier("patient_id"))
+        return
+    for key, model in (
+        ("medication_id", Medication), ("appointment_id", Appointment),
+        ("symptom_id", SymptomRecord), ("note_id", CaregiverNote),
+        ("alert_id", Alert),
+    ):
+        if key in params:
+            record = db.get(model, identifier(key))
+            if record is None:
+                raise HTTPException(404, "Registro no encontrado")
+            require_patient(db, user, record.patient_id)
+            return

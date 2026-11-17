@@ -39,7 +39,10 @@ def get_current_user(
             detail="Token inválido o expirado"
         )
 
-    user = db.get(User, int(user_id))
+    try:
+        user = db.get(User, int(user_id))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido")
 
     if user is None:
         raise HTTPException(

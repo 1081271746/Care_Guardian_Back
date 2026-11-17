@@ -48,6 +48,8 @@ def create_patient(
     )
 
     db.add(new_patient)
+    db.flush()
+    db.add(PatientCaregiver(patient_id=new_patient.id, user_id=current_user.id))
     db.commit()
     db.refresh(new_patient)
 
@@ -59,7 +61,9 @@ def get_patients(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patients = db.query(Patient).all()
+    patients = db.query(Patient).join(PatientCaregiver).filter(
+        PatientCaregiver.user_id == current_user.id
+    ).distinct().all()
 
     return patients
 
