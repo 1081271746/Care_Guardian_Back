@@ -42,10 +42,13 @@ Mapa de archivos:
 
 ## Verificación y límites
 
-Se ejecutaron 29 pruebas con SQLite y 29 con PostgreSQL 16 local UTF-8:
+Se ejecutaron 32 pruebas con SQLite y 32 con PostgreSQL 16 local UTF-8:
 estadísticas reales de fixtures aislados, fechas inclusivas, datos vacíos, acceso
 por asignación, consentimiento, clave ausente, respuestas de Groq válidas e
 inválidas, fallos HTTP/conexión/timeout, cuota y conservación de migraciones.
+Se validan identificadores de ruta incorrectos sin errores 500. La suite rechaza
+una URL de pruebas PostgreSQL que no sea local o cuyo nombre no incluya `test`,
+para evitar el borrado accidental de tablas en una base real.
 Las llamadas a Groq se simulan; no se ha enviado información sanitaria a Groq.
 Los datos de prueba no se usan para poblar la aplicación ni simular historiales.
 

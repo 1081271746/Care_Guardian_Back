@@ -33,8 +33,13 @@ def enforce_patient_scope(
     user=Depends(get_current_user),
 ):
     params = request.path_params
+    def identifier(key):
+        try:
+            return int(params[key])
+        except (TypeError, ValueError):
+            raise HTTPException(422, "El identificador debe ser un número entero")
     if "patient_id" in params:
-        require_patient(db, user, int(params["patient_id"]))
+        require_patient(db, user, identifier("patient_id"))
         return
     for key, model in (
         ("medication_id", Medication), ("appointment_id", Appointment),
@@ -42,7 +47,7 @@ def enforce_patient_scope(
         ("alert_id", Alert),
     ):
         if key in params:
-            record = db.get(model, int(params[key]))
+            record = db.get(model, identifier(key))
             if record is None:
                 raise HTTPException(404, "Registro no encontrado")
             require_patient(db, user, record.patient_id)

@@ -8,6 +8,7 @@ os.environ.setdefault("SECRET_KEY", secrets.token_urlsafe(48))
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 from app.main import app
@@ -28,6 +29,12 @@ class AuthHeaders(dict):
 def env(monkeypatch):
     # This optional URL must point to an expendable LOCAL database, never production.
     url = os.getenv("TEST_DATABASE_URL", "sqlite://")
+    parsed = make_url(url)
+    if parsed.get_backend_name() != "sqlite" and (
+        parsed.host not in {"localhost", "127.0.0.1", "::1"}
+        or "test" not in (parsed.database or "").lower()
+    ):
+        raise RuntimeError("TEST_DATABASE_URL debe ser una base local desechable con 'test' en su nombre")
     engine = create_engine(url, **(
         {"connect_args": {"check_same_thread": False}, "poolclass": StaticPool}
         if url.startswith("sqlite") else {}

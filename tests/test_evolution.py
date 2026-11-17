@@ -20,6 +20,12 @@ from app.services.groq_analysis import GROQ_URL
 
 BODY = {"consentimiento": True, "version_consentimiento": "groq-minimized-v1"}
 
+@pytest.mark.parametrize("path", ["/patients/not-a-number", "/medications/not-a-number",
+                                 "/evolution/patients/not-a-number"])
+def test_invalid_path_ids_are_validation_errors(env, path):
+    client, _, _, headers, _ = env
+    assert client.get(path, headers=headers).status_code == 422
+
 
 def test_real_metrics_zero_values_filters_and_empty(env):
     client, db, pid, headers, _ = env
