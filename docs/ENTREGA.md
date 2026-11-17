@@ -65,3 +65,43 @@ No se accedió ni se modificó una base de datos remota. La política de conserv
 los acuerdos de procesamiento y la autorización real deben configurarse antes
 del uso con datos sensibles. La reserva de cuota se valida en PostgreSQL; SQLite
 se utiliza solo para pruebas rápidas y no ofrece las mismas garantías de bloqueo.
+
+También se ejecutaron los cinco scripts originales (`test_db.py`, `test_risk.py`,
+`test_note_analysis.py`, `test_historical_analysis.py`, `test_alert_generator.py`)
+contra una base local vacía con el esquema migrado. Son ilustrativos; ejecutarlos
+no demuestra resultados clínicos ni resultados sobre una base de producción.
+Las migraciones se ejecutaron hasta `002_evolution` en PostgreSQL local.
+Las 32 pruebas también pasaron en [GitHub Actions](https://github.com/1081271746/Care_Guardian_Back/actions/runs/44189857521).
+
+## Listado completo de archivos nuevos o modificados
+
+```text
+.dockerignore
+.env.example
+.github/workflows/tests.yml
+.gitignore
+Dockerfile
+README.md
+alembic.ini
+app/core/access.py
+app/core/dependencies.py
+app/database/connection.py
+app/main.py
+app/models/evolution_analysis.py
+app/routers/evolution.py
+app/routers/patient.py
+app/routers/user.py
+app/schemas/evolution.py
+app/services/evolution.py
+app/services/groq_analysis.py
+docs/ENTREGA.md
+migrations/env.py
+migrations/versions/001_existing_schema.py
+migrations/versions/002_evolution_analysis.py
+railway.toml
+requirements-dev.txt
+requirements.txt
+tests/conftest.py
+tests/test_evolution.py
+tests/test_legacy_services.py
+```
