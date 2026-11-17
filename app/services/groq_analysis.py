@@ -18,10 +18,13 @@ def generate_analysis(data):
         raise HTTPException(503, "El análisis IA no está configurado")
     facts = data["hechos"]
     payload = {
-        "model": model, "temperature": 0, "max_completion_tokens": 2048,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content":
+    "model": model,
+    "temperature": 0,
+    "max_completion_tokens": 2048,
+    "reasoning_effort": "low",
+    "response_format": {"type": "json_object"},
+    "messages": [
+        {"role": "system", "content":
              "Selecciona hechos relevantes para un resumen descriptivo de seguimiento. "
              "Devuelve exclusivamente JSON con resumen (1 a 6 IDs de hechos) y revisar "
              "(0 a 4 IDs de hechos para comentar con un profesional). "

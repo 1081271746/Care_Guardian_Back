@@ -65,3 +65,5 @@ class Medication(Base):
         nullable=False,
         default=datetime.utcnow
     )
+
+    

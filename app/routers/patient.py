@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.models.patient_caregiver import PatientCaregiver
 from app.schemas.caregiver import CaregiverAssignmentCreate
-
 from app.database.connection import get_db
 from app.models.patient import Patient
 from app.schemas.patient import (
@@ -49,8 +49,17 @@ def create_patient(
 
     db.add(new_patient)
     db.flush()
-    db.add(PatientCaregiver(patient_id=new_patient.id, user_id=current_user.id))
+
+    # Asignar automáticamente el paciente al cuidador creador.
+    new_assignment = PatientCaregiver(
+        patient_id=new_patient.id,
+        user_id=current_user.id,
+        rol="cuidador"
+    )
+
+    db.add(new_assignment)
     db.commit()
+
     db.refresh(new_patient)
 
     return new_patient
@@ -154,6 +163,7 @@ def delete_patient(
         "mensaje": "Paciente eliminado correctamente"
     }
 
+
 @router.post("/{patient_id}/caregivers")
 def assign_caregiver(
     patient_id: int,
@@ -214,6 +224,8 @@ def assign_caregiver(
             "fecha_asignacion": new_assignment.fecha_asignacion
         }
     }
+
+
 @router.get("/{patient_id}/caregivers")
 def get_patient_caregivers(
     patient_id: int,
@@ -249,4 +261,3 @@ def get_patient_caregivers(
         }
         for assignment, user in caregivers
     ]
-
