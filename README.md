@@ -1,8 +1,11 @@
 CREDENCIALES PARA INICIAR:
+
 CORREO: carlos@careguardian.com
 CONTRASEÑA: CareGuardian123
 
-# CareGuardian 🩺
+
+
+# CareGuardian 
 ## Sistema inteligente de acompañamiento y seguimiento para adultos mayores
 
 **CareGuardian** es una plataforma web orientada al acompañamiento y cuidado de adultos mayores. Su propósito es facilitar el trabajo de familiares y cuidadores mediante herramientas digitales para administrar información, realizar seguimiento de síntomas, organizar medicamentos y citas médicas y analizar la evolución de los pacientes mediante inteligencia artificial.
