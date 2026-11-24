@@ -7,3 +7,5 @@ __pycache__/
 *.db
 .env.*
 !.env.example
+careguardian_backup.dump
+*.dump
