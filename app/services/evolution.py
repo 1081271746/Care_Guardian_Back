@@ -1,4 +1,4 @@
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from statistics import mean
 from fastapi import HTTPException
 from app.models.symptom_record import SymptomRecord
@@ -16,7 +16,9 @@ def utc(value):
 
 def evolution(db, patient_id, period):
     start = datetime.combine(period.desde, time.min, timezone.utc) if period.desde else None
-    end = datetime.combine(period.hasta + timedelta(days=1), time.min, timezone.utc) if period.hasta else None
+    # date.max has no following day; no stored date can exceed it.
+    next_day = period.hasta + timedelta(days=1) if period.hasta and period.hasta < date.max else None
+    end = datetime.combine(next_day, time.min, timezone.utc) if next_day else None
     sources = (
         ("sintoma", SymptomRecord, "activo"),
         ("medicamento", Medication, None),
@@ -35,7 +37,7 @@ def evolution(db, patient_id, period):
         if start:
             query = query.filter(column >= (period.desde if kind in ("cita", "medicamento") else start))
         if end:
-            query = query.filter(column < (period.hasta + timedelta(days=1) if kind in ("cita", "medicamento") else end))
+            query = query.filter(column < (next_day if kind in ("cita", "medicamento") else end))
         records = query.order_by(column.asc(), model.id.asc()).limit(MAX_RECORDS + 1).all()
         if len(records) > MAX_RECORDS:
             raise HTTPException(422, "Demasiados registros; selecciona un período más corto")
