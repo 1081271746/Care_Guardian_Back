@@ -11,7 +11,8 @@ MAX_RECORDS = 2000
 
 
 def utc(value):
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None
+            else value.astimezone(timezone.utc))
 
 
 def evolution(db, patient_id, period):
