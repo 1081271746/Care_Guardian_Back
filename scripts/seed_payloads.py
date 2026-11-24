@@ -1,6 +1,7 @@
 """Deterministic, fictional fixtures matching the existing API schemas."""
 from datetime import date, timedelta
 import re
+from hashlib import sha256
 
 DEFAULT_COUNTS = {
     "patients": 10, "medications": 20, "appointments": 20,
@@ -27,7 +28,8 @@ def patient_payload(namespace, index):
     return {
         "nombres": "Paciente ficticio", "apellidos": f"Demostración {index + 1}",
         "fecha_nacimiento": f"{1945 + index % 25}-06-15",
-        "documento": marker(namespace, "patients", index),
+        # PostgreSQL patients.documento is VARCHAR(30).
+        "documento": "CG-DEMO-" + sha256(marker(namespace, "patients", index).encode()).hexdigest()[:20],
     }
 
 
