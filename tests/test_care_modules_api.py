@@ -143,5 +143,5 @@ def test_medication_vigente_reflects_dates_and_status(env):
     future = client.post(base, headers=headers, json=med(nombre="Futuro",
                          fecha_inicio=(TODAY + timedelta(days=5)).isoformat())).json()
     assert current["vigente"] is True and future["vigente"] is False
-    suspended = client.delete(f"/medications/{current['id']}", headers=headers)
+    client.delete(f"/medications/{current['id']}", headers=headers)
     assert client.get(f"/medications/{current['id']}", headers=headers).json()["vigente"] is False

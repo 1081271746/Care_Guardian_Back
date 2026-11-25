@@ -1,0 +1,7 @@
+line-length = 120
+target-version = "py313"
+extend-exclude = ["migrations/versions"]
+
+[lint]
+select = ["E", "F", "W", "I001", "B"]
+ignore = ["E712", "B008"]  # SQLAlchemy comparisons; FastAPI Depends() defaults

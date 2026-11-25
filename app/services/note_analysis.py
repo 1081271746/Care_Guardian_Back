@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import re
 
 
 NEGATION_WORDS = {"no", "sin", "nunca", "tampoco", "ni"}
