@@ -220,3 +220,14 @@ def test_groq_rate_limit_is_forwarded_with_retry_after(env):
     assert result.headers["retry-after"] == "12"
     assert "SECRET" not in result.text
     assert db.query(EvolutionAnalysis).one().status == "failed"
+
+
+def test_ai_status_reports_configuration_without_secrets(env, monkeypatch):
+    client, _, _, headers, _ = env
+    status = client.get("/evolution/ai-status", headers=headers).json()
+    assert status["configurado"] is True
+    assert status["modelo"] == "openai/gpt-oss-20b"
+    assert os.environ["GROQ_API_KEY"] not in json.dumps(status)
+    monkeypatch.delenv("GROQ_API_KEY")
+    assert client.get("/evolution/ai-status", headers=headers).json()["configurado"] is False
+    assert client.get("/evolution/ai-status").status_code == 401

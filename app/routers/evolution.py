@@ -20,6 +20,18 @@ def period_query(desde: date | None = None, hasta: date | None = None):
     return Period(desde=desde, hasta=hasta)
 
 
+@router.get("/ai-status", summary="Disponibilidad del análisis con Groq (sin secretos)")
+def ai_status(user=Depends(get_current_user)):
+    model = os.getenv("GROQ_MODEL", "")
+    return {
+        "configurado": bool(os.getenv("GROQ_API_KEY")) and bool(model),
+        "proveedor": "Groq",
+        "modelo": model or None,
+        "limite_por_minuto": max(1, int(os.getenv("GROQ_REQUESTS_PER_MINUTE", "10"))),
+        "version_consentimiento": CONSENT_VERSION,
+    }
+
+
 @router.get("/patients/{patient_id}")
 def get_evolution(patient_id: int, period: Period = Depends(period_query),
                   db: Session = Depends(get_db), user=Depends(get_current_user)):
