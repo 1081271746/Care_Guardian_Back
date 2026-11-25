@@ -1,3 +1,4 @@
+import hashlib
 import os
 from datetime import timedelta
 
@@ -43,6 +44,11 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 def spend_password_check(password: str) -> None:
     verify_password(password, _DUMMY_HASH)
+
+
+def credential_fingerprint(password_hash_value: str) -> str:
+    """Short digest of the stored hash: tokens die when the password changes."""
+    return hashlib.sha256(f"{SECRET_KEY}:{password_hash_value}".encode()).hexdigest()[:16]
 
 
 def create_access_token(data: dict) -> str:

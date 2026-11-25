@@ -7,6 +7,7 @@ from app.core.dependencies import get_current_user
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
+    credential_fingerprint,
     spend_password_check,
     verify_password,
 )
@@ -66,7 +67,11 @@ def login(
             detail="Usuario inactivo"
         )
 
-    access_token = create_access_token({"sub": str(user.id), "rol": user.rol})
+    access_token = create_access_token({
+        "sub": str(user.id),
+        "rol": user.rol,
+        "pwd": credential_fingerprint(user.password_hash),
+    })
 
     return {
         "access_token": access_token,

@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 
-from app.core.security import SECRET_KEY, ALGORITHM
+from app.core.security import ALGORITHM, SECRET_KEY, credential_fingerprint
 from app.database.connection import get_db
 from app.models.user import User
 
@@ -65,6 +65,14 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no encontrado",
+            headers=UNAUTHORIZED_HEADERS,
+        )
+
+    fingerprint = payload.get("pwd")
+    if fingerprint is not None and fingerprint != credential_fingerprint(user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tu contraseña cambió; inicia sesión nuevamente",
             headers=UNAUTHORIZED_HEADERS,
         )
 

@@ -125,3 +125,16 @@ def test_shared_address_is_not_blocked_by_another_users_failures(env, monkeypatc
         client.post("/auth/login", json={"email": "otra@example.org", "password": "Incorrecta1"})
     # Same client address (TestClient), different account: still allowed.
     assert client.post("/auth/login", json={"email": "nueva@example.org", "password": PASSWORD}).status_code == 200
+
+
+def test_password_change_revokes_previous_tokens(env):
+    client, *_ = env
+    register(client)
+    token = client.post("/auth/login", json={"email": "nueva@example.org", "password": PASSWORD}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    user_id = client.get("/auth/me", headers=headers).json()["id"]
+    client.put(f"/users/{user_id}/password", headers=headers,
+               json={"password_actual": PASSWORD, "password_nueva": "Nueva2027"})
+    revoked = client.get("/auth/me", headers=headers)
+    assert revoked.status_code == 401
+    assert "contraseña cambió" in revoked.json()["detail"]
