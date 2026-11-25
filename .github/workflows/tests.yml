@@ -37,4 +37,4 @@ jobs:
           alembic upgrade head
           alembic upgrade head
           psql postgresql://runner@127.0.0.1:5432/careguardian_test -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-      - run: python -m pytest -q --tb=short
+      - run: python -m pytest -q --tb=short --cov=app --cov=scripts --cov-report=term-missing:skip-covered --cov-fail-under=85
