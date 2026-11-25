@@ -6,3 +6,10 @@ __pycache__
 .pytest_cache
 .venv
 *.db
+tests
+docs
+.github
+*.dump
+*.sql
+pytest.ini
+requirements-dev.txt
