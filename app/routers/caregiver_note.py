@@ -1,19 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.access import require_patient, require_record
 from app.core.dependencies import get_current_user
+from app.core.time import utc_now
 from app.database.connection import get_db
-from app.models.patient import Patient
-from app.models.patient_caregiver import PatientCaregiver
 from app.models.caregiver_note import CaregiverNote
 from app.models.user import User
-from app.services.note_analysis import analyze_caregiver_note
-from app.services.alert_generator import generate_alert_from_note
 from app.schemas.caregiver_note import (
     CaregiverNoteCreate,
     CaregiverNoteUpdate,
     CaregiverNoteResponse
 )
+from app.services.alert_generator import generate_alert_from_note
+from app.services.note_analysis import analyze_caregiver_note
 
 
 router = APIRouter(
@@ -21,10 +21,13 @@ router = APIRouter(
     tags=["Caregiver Notes"]
 )
 
+NOT_FOUND = "Nota no encontrada"
+
 
 @router.post(
     "/patients/{patient_id}",
-    response_model=CaregiverNoteResponse
+    response_model=CaregiverNoteResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_note(
     patient_id: int,
@@ -32,51 +35,20 @@ def create_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
-
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    if not patient.activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El paciente está inactivo"
-        )
-
-    assignment = db.query(PatientCaregiver).filter(
-        PatientCaregiver.patient_id == patient_id,
-        PatientCaregiver.user_id == current_user.id
-    ).first()
-
-    if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no está asignado a este paciente"
-        )
+    require_patient(db, current_user, patient_id, active=True)
 
     new_note = CaregiverNote(
         patient_id=patient_id,
         caregiver_id=current_user.id,
-        contenido=note_data.contenido
+        contenido=note_data.contenido,
+        fecha_registro=note_data.fecha_registro or utc_now(),
     )
 
     db.add(new_note)
     db.flush()
 
-     # Analizar automáticamente la nota
-    analysis_result = analyze_caregiver_note(
-    new_note.contenido
-)
-
-    # Generar alerta si se detecta un riesgo
-    generate_alert_from_note(
-    new_note,
-    analysis_result,
-    db
-)
+    # Analizar automáticamente la nota y generar alerta si se detecta un riesgo
+    generate_alert_from_note(new_note, analyze_caregiver_note(new_note.contenido), db)
 
     db.commit()
     db.refresh(new_note)
@@ -90,36 +62,19 @@ def create_note(
 )
 def get_patient_notes(
     patient_id: int,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id)
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    assignment = db.query(PatientCaregiver).filter(
-        PatientCaregiver.patient_id == patient_id,
-        PatientCaregiver.user_id == current_user.id
-    ).first()
-
-    if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no está asignado a este paciente"
-        )
-
-    notes = db.query(CaregiverNote).filter(
+    return db.query(CaregiverNote).filter(
         CaregiverNote.patient_id == patient_id,
-        CaregiverNote.activo == True
+        CaregiverNote.activo.is_(True)
     ).order_by(
-        CaregiverNote.fecha_registro.desc()
-    ).all()
-
-    return notes
+        CaregiverNote.fecha_registro.desc(), CaregiverNote.id.desc()
+    ).offset(offset).limit(limit).all()
 
 
 @router.get(
@@ -131,26 +86,7 @@ def get_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    note = db.get(CaregiverNote, note_id)
-
-    if note is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nota no encontrada"
-        )
-
-    assignment = db.query(PatientCaregiver).filter(
-        PatientCaregiver.patient_id == note.patient_id,
-        PatientCaregiver.user_id == current_user.id
-    ).first()
-
-    if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no está asignado a este paciente"
-        )
-
-    return note
+    return require_record(db, current_user, CaregiverNote, note_id, not_found=NOT_FOUND)
 
 
 @router.put(
@@ -163,27 +99,16 @@ def update_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    note = db.get(CaregiverNote, note_id)
+    note = require_record(db, current_user, CaregiverNote, note_id, not_found=NOT_FOUND)
 
-    if note is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nota no encontrada"
-        )
-
-    assignment = db.query(PatientCaregiver).filter(
-        PatientCaregiver.patient_id == note.patient_id,
-        PatientCaregiver.user_id == current_user.id
-    ).first()
-
-    if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no está asignado a este paciente"
-        )
+    if note.caregiver_id != current_user.id:
+        # Teammates can read each other's notes but only the author edits them.
+        raise HTTPException(status_code=403, detail="Solo el autor puede modificar esta nota")
 
     if note_data.contenido is not None:
         note.contenido = note_data.contenido
+        if note.activo:
+            generate_alert_from_note(note, analyze_caregiver_note(note.contenido), db)
 
     if note_data.activo is not None:
         note.activo = note_data.activo
@@ -200,24 +125,10 @@ def delete_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    note = db.get(CaregiverNote, note_id)
+    note = require_record(db, current_user, CaregiverNote, note_id, not_found=NOT_FOUND)
 
-    if note is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Nota no encontrada"
-        )
-
-    assignment = db.query(PatientCaregiver).filter(
-        PatientCaregiver.patient_id == note.patient_id,
-        PatientCaregiver.user_id == current_user.id
-    ).first()
-
-    if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no está asignado a este paciente"
-        )
+    if note.caregiver_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el autor puede eliminar esta nota")
 
     note.activo = False
 
