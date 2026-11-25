@@ -107,7 +107,8 @@ def update_alert(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    alert = require_record(db, current_user, Alert, alert_id, not_found=NOT_FOUND, active=True)
+    # Closing alerts stays possible after the patient is deactivated.
+    alert = require_record(db, current_user, Alert, alert_id, not_found=NOT_FOUND)
     changes = alert_data.model_dump(exclude_none=True)
 
     for field, value in changes.items():

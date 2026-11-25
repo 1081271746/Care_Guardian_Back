@@ -82,3 +82,12 @@ def test_inactive_patient_records_are_read_only(env):
     client.delete(f"/patients/{pid}", headers=headers)
     assert client.get(f"/symptoms/{record.id}", headers=headers).status_code == 200
     assert client.put(f"/symptoms/{record.id}", headers=headers, json={"nivel_dolor": 3}).status_code == 400
+
+
+def test_alerts_can_still_be_closed_after_deactivation(env):
+    client, _, pid, headers, _ = env
+    alert = client.post(f"/alerts/patients/{pid}", headers=headers,
+                        json={"titulo": "Pendiente al cerrar", "mensaje": "Alerta previa a la baja"}).json()
+    client.delete(f"/patients/{pid}", headers=headers)
+    closed = client.put(f"/alerts/{alert['id']}", headers=headers, json={"estado": "atendida"})
+    assert closed.status_code == 200 and closed.json()["activa"] is False
