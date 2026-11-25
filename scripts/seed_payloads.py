@@ -100,7 +100,8 @@ def resource_payload(namespace, resource, index, today=None, now=None):
         return {"observaciones": f"{tag} · Observación ficticia de demostración.",
                 "nivel_dolor": [1, 2, 2, 3, 2, 4, 3, 2, 1, 2][wave],
                 "calidad_sueno": [7, 8, 6, 7, 5, 6, 7, 8, 6, 7][wave],
-                "temperatura": round(36.2 + (index % 6) / 10, 1),
+                # Varies across the indexes that land on the same patient (stride = patients).
+                "temperatura": round(36.1 + ((index * 5 + index // 6) % 7) / 10, 1),
                 "nivel_gravedad": "bajo",
                 "estado_animo": MOODS[index % len(MOODS)],
                 "apetito": APPETITES[index % len(APPETITES)],
