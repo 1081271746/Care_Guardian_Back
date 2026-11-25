@@ -38,10 +38,25 @@ elif DATABASE_URL.startswith("postgresql://"):
         1
     )
 
+def _int_env(name: str, default: int) -> int:
+    try:
+        return max(1, int(os.getenv(name, default)))
+    except ValueError:
+        return default
+
+
+_pool_options = {} if DATABASE_URL.startswith("sqlite") else {
+    "pool_size": _int_env("DB_POOL_SIZE", 5),
+    "max_overflow": _int_env("DB_MAX_OVERFLOW", 5),
+    # Railway's proxy may drop idle connections; recycle before that happens.
+    "pool_recycle": _int_env("DB_POOL_RECYCLE_SECONDS", 1800),
+}
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    hide_parameters=True
+    hide_parameters=True,
+    **_pool_options,
 )
 
 SessionLocal = sessionmaker(
