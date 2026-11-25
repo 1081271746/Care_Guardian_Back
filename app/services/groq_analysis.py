@@ -34,6 +34,16 @@ def provider_error(response):
         return HTTPException(502, "Groq rechazó la solicitud de análisis")
     return HTTPException(502, "Groq no está disponible en este momento")
 
+SYSTEM_PROMPT = (
+    "Selecciona hechos relevantes para un resumen descriptivo de seguimiento. "
+    "Devuelve exclusivamente JSON con resumen (1 a 6 IDs de hechos) y revisar "
+    "(0 a 4 IDs de hechos para comentar con un profesional). "
+    "Usa solo claves del objeto hechos; no escribas texto libre. No diagnostiques, "
+    "no recomiendes tratamientos ni atribuyas causalidad o tendencias clínicas. "
+    "Prioriza mediciones sobre conteos. No interpretes ausencia de registros como ausencia de síntomas."
+)
+
+
 class GroqHTTPClient(httpx.Client):
     """Dedicated client type so provider mocks never intercept the API test client."""
 
@@ -45,19 +55,13 @@ def generate_analysis(data):
         raise HTTPException(503, "El análisis IA no está configurado")
     facts = data["hechos"]
     payload = {
-    "model": model,
-    "temperature": 0,
-    "max_completion_tokens": 2048,
-    "reasoning_effort": "low",
-    "response_format": {"type": "json_object"},
-    "messages": [
-        {"role": "system", "content":
-             "Selecciona hechos relevantes para un resumen descriptivo de seguimiento. "
-             "Devuelve exclusivamente JSON con resumen (1 a 6 IDs de hechos) y revisar "
-             "(0 a 4 IDs de hechos para comentar con un profesional). "
-             "Usa solo claves del objeto hechos; no escribas texto libre. No diagnostiques, "
-             "no recomiendes tratamientos ni atribuyas causalidad o tendencias clínicas. "
-             "Prioriza mediciones sobre conteos. No interpretes ausencia de registros como ausencia de síntomas."},
+        "model": model,
+        "temperature": 0,
+        "max_completion_tokens": 2048,
+        "reasoning_effort": "low",
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": json.dumps({"hechos": facts}, ensure_ascii=False)},
         ],
     }
