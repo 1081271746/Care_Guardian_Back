@@ -20,16 +20,8 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.user import router as user_router
 from app.routers.auth import router as auth_router
 
-from app.models.patient_caregiver import PatientCaregiver
-from app.models.appointment import Appointment
-from app.models.symptom_record import SymptomRecord
-from app.models.caregiver_note import CaregiverNote
-from app.models.alert import Alert
-from app.models.user import User
-from app.models.patient import Patient
-from app.models.medication import Medication
+import app.models  # noqa: F401  (registers every table in Base.metadata)
 
-from app.database.base import Base
 from app.database.connection import engine
 
 
