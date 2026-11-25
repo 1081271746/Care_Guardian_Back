@@ -15,6 +15,7 @@ from app.schemas.alert import AlertResponse
 from app.schemas.appointment import AppointmentResponse
 from app.schemas.caregiver_note import CaregiverNoteResponse
 from app.schemas.medication import MedicationResponse
+from app.schemas.patient import PatientResponse
 from app.schemas.symptom_record import SymptomRecordResponse
 from app.services.dashboard_summary import build_summary
 from app.services.historical_analysis import analyze_patient_history
@@ -87,18 +88,7 @@ def get_patient_dashboard(
     historical_result = analyze_patient_history(history)
 
     return {
-        "patient": {
-            "id": patient.id,
-            "nombres": patient.nombres,
-            "apellidos": patient.apellidos,
-            "fecha_nacimiento": patient.fecha_nacimiento,
-            "documento": patient.documento,
-            "telefono": patient.telefono,
-            "direccion": patient.direccion,
-            "contacto_emergencia": patient.contacto_emergencia,
-            "telefono_emergencia": patient.telefono_emergencia,
-            "activo": patient.activo,
-        },
+        "patient": PatientResponse.model_validate(patient).model_dump(mode="json"),
         "symptoms": serialize(SymptomRecordResponse, history[:RECENT_ITEMS]),
         "medications": serialize(MedicationResponse, medications),
         "upcoming_appointments": serialize(AppointmentResponse, appointments),

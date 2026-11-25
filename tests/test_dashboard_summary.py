@@ -46,3 +46,14 @@ def test_summary_requires_authentication(env):
     response = client.get("/dashboard/summary")
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_patient_panel_serializes_patient_and_lists(env):
+    client, _, pid, headers, other = env
+    panel = client.get(f"/dashboard/patients/{pid}", headers=headers)
+    assert panel.status_code == 200
+    data = panel.json()
+    assert data["patient"]["id"] == pid and "edad" in data["patient"]
+    assert data["historical_analysis"]["registros_analizados"] == 2
+    assert {"symptoms", "medications", "upcoming_appointments", "recent_notes", "active_alerts"} <= set(data)
+    assert client.get(f"/dashboard/patients/{pid}", headers=other).status_code == 403
