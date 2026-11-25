@@ -1,5 +1,6 @@
-from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, JSON, String
+from datetime import date, datetime
+
+from sqlalchemy import Date, DateTime, ForeignKey, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.time import utc_now
 from app.database.base import Base
@@ -18,3 +19,8 @@ class EvolutionAnalysis(Base):
     model: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(20), default="pending")
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Explicit period columns make the history queryable without parsing JSON.
+    period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    period_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Short, user-safe reason for failed attempts (never provider bodies).
+    error: Mapped[str | None] = mapped_column(String(200), nullable=True)

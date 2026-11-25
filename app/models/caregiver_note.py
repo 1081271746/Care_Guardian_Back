@@ -17,7 +17,8 @@ class CaregiverNote(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     caregiver_id: Mapped[int] = mapped_column(

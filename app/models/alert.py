@@ -17,7 +17,8 @@ class Alert(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     symptom_id: Mapped[int | None] = mapped_column(

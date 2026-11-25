@@ -17,7 +17,8 @@ class Medication(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     nombre: Mapped[str] = mapped_column(

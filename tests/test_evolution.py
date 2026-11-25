@@ -171,7 +171,7 @@ def test_non_destructive_migrations(tmp_path):
     with engine.connect() as connection:
         assert connection.execute(text("SELECT value FROM legacy_marker")).scalar() == "preserve"
         assert connection.execute(text("SELECT documento FROM patients")).scalar() == "TEST-MIGRATION"
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == "002_evolution"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == "003_indexes_period"
 
 
 @pytest.mark.parametrize("kind", ["medications", "appointments", "symptoms", "notes", "alerts"])
