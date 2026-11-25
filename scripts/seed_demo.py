@@ -4,7 +4,8 @@ import json
 import os
 import sys
 from .seed_http import SeedClient, SeedError, validate_url
-from .seed_payloads import DEFAULT_COUNTS, validate_namespace
+from .seed_payloads import (DEFAULT_COUNTS, IDENTITY_FIELDS, patient_payload,
+                            resource_payload, validate_namespace)
 from .seed_runner import run_seed, validate_counts
 
 
@@ -25,8 +26,14 @@ def main(argv=None):
         validate_counts(counts)
         validate_namespace(args.namespace)
         if not args.apply:
-            print(json.dumps({"mode": "dry-run", "counts": counts,
-                              "assignments": counts["patients"]}, ensure_ascii=False))
+            # Exactly what --apply would send: one sample payload per resource.
+            examples = {"patients": patient_payload(args.namespace, 0)} if counts["patients"] else {}
+            for resource in IDENTITY_FIELDS:
+                if counts[resource]:
+                    examples[resource] = resource_payload(args.namespace, resource, 0)
+            print(json.dumps({"mode": "dry-run", "namespace": args.namespace, "counts": counts,
+                              "assignments": counts["patients"], "examples": examples},
+                             ensure_ascii=False, indent=2))
             return 0
         url = os.getenv("SEED_BASE_URL", "")
         local = validate_url(url)

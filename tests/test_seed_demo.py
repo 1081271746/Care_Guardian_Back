@@ -152,3 +152,10 @@ def test_create_account_registers_only_when_login_fails():
         assert ("POST", "/users/") in calls and calls.count(("POST", "/users/")) == 1
     finally:
         client.close()
+
+
+def test_dry_run_documents_sample_records(capsys):
+    assert main(["--namespace", "preview"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert set(report["examples"]) == {"patients", "medications", "appointments", "symptoms", "notes", "alerts"}
+    assert report["examples"]["symptoms"]["observaciones"].startswith("CG-DEMO-preview-symptoms-0000")
