@@ -258,3 +258,43 @@ Errores (nunca se reenvía el cuerpo de Groq ni la clave):
 | Respuesta inválida o error del proveedor | `502` |
 
 Comprobar la configuración sin exponer secretos: `GET /evolution/ai-status`.
+
+## Módulo de evolución
+
+`GET /evolution/patients/{id}?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` devuelve:
+
+- `totales`: registros por tipo en el período.
+- `metricas`: para dolor, sueño y temperatura — cantidad, promedio, primera y
+  última medición, diferencia y `puntos` (solo mediciones reales, en orden cronológico).
+- `categorias`: conteos de gravedad, apetito y ánimo.
+- `historial`: línea de tiempo (síntomas, notas, alertas, citas por fecha
+  programada y medicamentos por fecha de inicio), de la más reciente a la más antigua.
+- `datos_suficientes`: hay al menos dos mediciones de un mismo indicador.
+- `zona_horaria`: zona usada para los límites del período.
+
+Decisiones:
+
+- Los días del filtro son días del calendario del cuidador (`APP_TIMEZONE`):
+  un registro a las 21:00 en Bogotá pertenece a ese día aunque en UTC ya sea el siguiente.
+- No se interpolan mediciones faltantes; las gráficas espacian los puntos según el tiempo real.
+- La diferencia entre la primera y la última medición se presenta como tal,
+  nunca como “tendencia clínica”.
+- Máximo 2000 registros por tipo y período; si se supera, la API pide un período más corto.
+
+## Pruebas
+
+```sh
+pip install -r requirements-dev.txt
+python -m pytest -q                                   # SQLite en memoria
+TEST_DATABASE_URL=postgresql+psycopg://USER@127.0.0.1:5432/careguardian_test \
+  python -m pytest -q                                 # PostgreSQL local desechable
+```
+
+- `TEST_DATABASE_URL` debe ser local y contener “test” en el nombre; la suite se niega a usar otra base.
+- Groq siempre se simula con `unittest.mock`: no se necesita ni se usa una clave real.
+- Cobertura: autenticación, permisos (matriz por recurso), pacientes y equipo,
+  medicamentos, citas, síntomas, notas, alertas, panel, evolución (zonas horarias,
+  límites, categorías), Groq (éxito, minimización, cuotas, errores, reintento),
+  migraciones sobre un esquema heredado en PostgreSQL, persistencia tras abrir
+  un motor nuevo y la carga de demostración.
+- GitHub Actions (`.github/workflows/tests.yml`) ejecuta migraciones dos veces y la suite en PostgreSQL 16.
