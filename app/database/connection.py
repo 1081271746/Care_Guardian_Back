@@ -12,10 +12,18 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-DATABASE_URL = os.getenv("DATABASE_URL") or (
-    f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}"
-    f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+if os.getenv("DATABASE_URL"):
+    DATABASE_URL = os.environ["DATABASE_URL"].strip()
+elif all((DB_HOST, DB_NAME, DB_USER)):
+    DATABASE_URL = (
+        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD or ''}"
+        f"@{DB_HOST}:{DB_PORT or 5432}/{DB_NAME}"
+    )
+else:
+    # Fail at import with a clear message instead of connecting to "None:None@None".
+    raise RuntimeError(
+        "Configura DATABASE_URL (o DB_HOST, DB_NAME, DB_USER y DB_PASSWORD) antes de iniciar la API"
+    )
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
