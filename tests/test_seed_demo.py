@@ -131,3 +131,24 @@ def test_demo_records_are_labelled_spread_in_time_and_never_future():
     assert "(demo)" in patient_payload("t", 0)["nombres"]
     assert "(demo)" in resource_payload("t", "medications", 0)["nombre"]
     assert "(demo)" in resource_payload("t", "alerts", 0)["titulo"]
+
+
+def test_create_account_registers_only_when_login_fails():
+    calls = []
+    def handle(request):
+        calls.append((request.method, request.url.path))
+        if request.url.path == "/auth/login":
+            return httpx.Response(401 if len(calls) == 1 else 200, json={"access_token": "test-only"})
+        if request.url.path == "/users/":
+            body = json.loads(request.content)
+            assert body["email"] == "demo@example.org" and "rol" not in body
+            return httpx.Response(201, json={"usuario": {"id": 1}})
+        return httpx.Response(404)
+    client = SeedClient("https://example.org", "demo@example.org", "Demo2026",
+                        transport=httpx.MockTransport(handle))
+    try:
+        assert client.ensure_account("Demo") == "created"
+        assert client.ensure_account("Demo") == "existing"
+        assert ("POST", "/users/") in calls and calls.count(("POST", "/users/")) == 1
+    finally:
+        client.close()

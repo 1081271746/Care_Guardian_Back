@@ -13,6 +13,9 @@ def main(argv=None):
     parser.add_argument("--apply", action="store_true", help="Crear registros mediante la API")
     parser.add_argument("--confirm-production", action="store_true", help="Autorizar escrituras en un servidor no local")
     parser.add_argument("--namespace", default="carlos-demo-v1")
+    parser.add_argument("--create-account", action="store_true",
+                        help="Registrar SEED_EMAIL mediante POST /users/ si todavía no existe")
+    parser.add_argument("--account-name", default="Carlos (cuenta demo)")
     for key, default in DEFAULT_COUNTS.items():
         parser.add_argument("--" + key, type=int, default=default)
     args = parser.parse_args(argv)
@@ -30,7 +33,9 @@ def main(argv=None):
         if not local and not args.confirm_production:
             raise SeedError("El servidor no es local; revisa el destino y usa --confirm-production")
         client = SeedClient(url, os.getenv("SEED_EMAIL", ""), os.getenv("SEED_PASSWORD", ""))
+        account = client.ensure_account(args.account_name) if args.create_account else "existing"
         result = run_seed(client, counts, args.namespace)
+        result["account"] = account
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (SeedError, ValueError) as error:

@@ -47,6 +47,22 @@ class SeedClient:
             raise SeedError("La autenticación no devolvió un token válido")
         self._token = data["access_token"]
 
+    def ensure_account(self, nombre):
+        """Create the demo caregiver through POST /users/ only if login fails with 401."""
+        response = self._send("POST", "/auth/login",
+                              json={"email": self._email, "password": self._password})
+        if response.status_code == 200:
+            return "existing"
+        if response.status_code != 401:
+            raise SeedError(f"No fue posible comprobar la cuenta: HTTP {response.status_code}")
+        created = self._send("POST", "/users/",
+                             json={"nombre": nombre, "email": self._email, "password": self._password})
+        if created.status_code == 409:
+            raise SeedError("La cuenta existe pero la contraseña no coincide; no se modificó")
+        if created.status_code not in (200, 201):
+            raise SeedError(f"No fue posible crear la cuenta de demostración: HTTP {created.status_code}")
+        return "created"
+
     @staticmethod
     def _json(response):
         try:
