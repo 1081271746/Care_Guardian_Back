@@ -1,72 +1,40 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
+
+from app.schemas.common import Text
+
+AlertLevel = Literal["bajo", "medio", "alto"]
+AlertStatus = Literal["pendiente", "en_revision", "atendida", "descartada"]
+CLOSED_STATUSES = {"atendida", "descartada"}
 
 
 class AlertCreate(BaseModel):
-    tipo: str = Field(
-        min_length=3,
-        max_length=50
-    )
+    model_config = ConfigDict(extra="forbid")
 
-    nivel: str = Field(
-        default="medio",
-        min_length=3,
-        max_length=20
-    )
-
-    titulo: str = Field(
-        min_length=3,
-        max_length=150
-    )
-
-    mensaje: str = Field(
-        min_length=5,
-        max_length=5000
-    )
-
-    estado: str = Field(
-        default="pendiente",
-        min_length=3,
-        max_length=20
-    )
-
-    origen: str = Field(
-        default="sistema",
-        min_length=3,
-        max_length=30
-    )
+    tipo: Text(50, min_length=3) = "manual"
+    nivel: AlertLevel = "medio"
+    titulo: Text(150, min_length=3)
+    mensaje: Text(5000, min_length=5)
+    estado: AlertStatus = "pendiente"
+    # Manual alerts are always created by a person; system origins are reserved.
+    origen: Literal["manual"] = "manual"
 
 
 class AlertUpdate(BaseModel):
-    nivel: str | None = Field(
-        default=None,
-        min_length=3,
-        max_length=20
-    )
+    model_config = ConfigDict(extra="forbid")
 
-    titulo: str | None = Field(
-        default=None,
-        min_length=3,
-        max_length=150
-    )
-
-    mensaje: str | None = Field(
-        default=None,
-        min_length=5,
-        max_length=5000
-    )
-
-    estado: str | None = Field(
-        default=None,
-        min_length=3,
-        max_length=20
-    )
-
+    nivel: AlertLevel | None = None
+    titulo: Text(150, min_length=3) | None = None
+    mensaje: Text(5000, min_length=5) | None = None
+    estado: AlertStatus | None = None
     activa: bool | None = None
 
 
 class AlertResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     patient_id: int
     symptom_id: int | None
@@ -79,6 +47,3 @@ class AlertResponse(BaseModel):
     origen: str
     fecha_registro: datetime
     activa: bool
-
-    class Config:
-        from_attributes = True
