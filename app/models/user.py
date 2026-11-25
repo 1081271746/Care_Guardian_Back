@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Boolean, DateTime, String, null
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -47,7 +48,7 @@ class User(Base):
     fecha_creacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     relaciones_pacientes = relationship(
