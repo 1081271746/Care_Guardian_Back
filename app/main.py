@@ -68,7 +68,7 @@ async def lifespan(app):
 app = FastAPI(
     title="CareGuardian API",
     description="Sistema de acompañamiento para cuidadores de adultos mayores",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan
 )
 
@@ -147,11 +147,11 @@ def health():
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
 
-        return {"status": "ok"}
+        return {"status": "ok", "database": "ok", "version": app.version}
 
     except Exception:
         return JSONResponse(
-            {"status": "unavailable"},
+            {"status": "unavailable", "database": "unavailable"},
             status_code=503
         )
 
