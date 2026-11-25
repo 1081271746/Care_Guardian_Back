@@ -73,3 +73,21 @@ def test_request_id_is_generated_or_propagated(env):
     assert len(generated) == 32
     assert client.get("/health", headers={"X-Request-ID": "abc123"}).headers["x-request-id"] == "abc123"
     assert client.get("/health", headers={"X-Request-ID": "bad id\\n"}).headers["x-request-id"] != "bad id\\n"
+
+
+def test_unexpected_errors_return_generic_json_with_request_id(env):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    def boom():
+        raise ValueError("internal detail with personal data")
+
+    app.add_api_route("/__test__/boom", boom)
+    try:
+        with TestClient(app, raise_server_exceptions=False) as raw:
+            response = raw.get("/__test__/boom")
+    finally:
+        app.router.routes[:] = [r for r in app.router.routes if not getattr(r, "path", "").startswith("/__test__")]
+    assert response.status_code == 500
+    assert "personal data" not in response.text
+    assert response.json()["request_id"]

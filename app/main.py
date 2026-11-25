@@ -167,6 +167,18 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError):
     )
 
 
+@app.exception_handler(Exception)
+async def unexpected_error_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", "")
+    logger.exception("Unhandled error on %s %s (request %s)", request.method, request.url.path, request_id)
+    return JSONResponse(
+        {"detail": "Ocurrió un error inesperado. Si persiste, comparte este código con soporte.",
+         "request_id": request_id},
+        status_code=500,
+        headers={"X-Request-ID": request_id, "Cache-Control": "private, no-store"},
+    )
+
+
 @app.middleware("http")
 async def private_responses(request, call_next):
     # Correlates a user-visible error with server logs without logging payloads.
