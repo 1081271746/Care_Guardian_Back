@@ -283,3 +283,15 @@ def test_analysis_history_is_paginated_newest_first(env, monkeypatch):
     second_page = client.get(url + "?limit=2&offset=2", headers=headers).json()
     assert [a["id"] for a in first_page] == ids[::-1][:2]
     assert [a["id"] for a in second_page] == ids[:1]
+
+
+def test_timeline_carries_severity_and_medication_fact(env):
+    client, db, pid, headers, _ = env
+    db.add(Medication(patient_id=pid, nombre="Privado", dosis="1", frecuencia="diaria",
+                      hora="08:00", fecha_inicio=date(2026, 11, 2)))
+    db.commit()
+    data = client.get(f"/evolution/patients/{pid}", headers=headers).json()
+    symptom_events = [e for e in data["historial"] if e["tipo"] == "sintoma"]
+    assert symptom_events and all(e["nivel"] == "bajo" for e in symptom_events)
+    assert "activos actualmente: 1" in data["hechos"]["medicamentos_activos"]
+    assert "Privado" not in data["hechos"]["medicamentos_activos"]

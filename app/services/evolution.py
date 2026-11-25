@@ -96,8 +96,12 @@ def evolution(db, patient_id, period, zone=None):
                 else f"{record.titulo} · {record.estado}" if kind == "cita"
                 else record.observaciones or "Registro de síntomas"
             )
+            # Severity lets the UI color the timeline without parsing descriptions.
+            severity = (record.nivel_gravedad if kind == "sintoma"
+                        else record.nivel if kind == "alerta" else None)
             events.append({"id": f"{kind}-{record.id}", "tipo": kind,
-                           "fecha": timestamp.isoformat(), "descripcion": description})
+                           "fecha": timestamp.isoformat(), "descripcion": description,
+                           "nivel": severity})
     symptoms = rows["sintoma"]
     metrics = {}
     facts = {}
@@ -139,6 +143,12 @@ def evolution(db, patient_id, period, zone=None):
         visit_states[visit.estado] = visit_states.get(visit.estado, 0) + 1
     if visit_states:
         facts["citas_por_estado"] = describe_counts("Citas por estado", dict(sorted(visit_states.items())))
+    active_medications = sum(1 for medication in rows["medicamento"] if medication.activo)
+    if rows["medicamento"]:
+        facts["medicamentos_activos"] = (
+            f"Medicamentos iniciados en el período: {len(rows['medicamento'])}; "
+            f"activos actualmente: {active_medications}."
+        )
     # No free text (names, notes, observations, medication names, identifiers) goes to Groq.
     for kind, label in (("sintoma", "síntomas"), ("nota", "notas del cuidador"),
                         ("medicamento", "inicios de medicamentos"), ("cita", "citas"),
