@@ -70,6 +70,11 @@ def create_analysis(patient_id: int, body: AnalysisRequest,
         attempt.status = "failed"
         db.commit()
         raise
+    except Exception:
+        # Unexpected failures must not leave the attempt "pending" forever.
+        attempt.status = "failed"
+        db.commit()
+        raise HTTPException(502, "No se pudo completar el análisis con Groq")
     attempt.status = "completed"
     attempt.result = result
     db.commit()
