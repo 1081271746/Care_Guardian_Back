@@ -134,3 +134,14 @@ def test_notes_and_symptoms_show_who_recorded_them(env):
     assert note["autor_nombre"] == "Cuidador prueba"
     symptoms = client.get(f"/symptoms/patients/{pid}", headers=headers).json()
     assert symptoms[0]["registrado_por_nombre"] == "Cuidador prueba"
+
+
+def test_medication_vigente_reflects_dates_and_status(env):
+    client, _, pid, headers, _ = env
+    base = f"/medications/patients/{pid}"
+    current = client.post(base, headers=headers, json=med()).json()
+    future = client.post(base, headers=headers, json=med(nombre="Futuro",
+                         fecha_inicio=(TODAY + timedelta(days=5)).isoformat())).json()
+    assert current["vigente"] is True and future["vigente"] is False
+    suspended = client.delete(f"/medications/{current['id']}", headers=headers)
+    assert client.get(f"/medications/{current['id']}", headers=headers).json()["vigente"] is False

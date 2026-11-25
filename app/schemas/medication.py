@@ -1,6 +1,8 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+
+from app.core.time import local_today
 
 from app.schemas.common import HOUR_PATTERN, OptionalText, Text
 
@@ -56,3 +58,10 @@ class MedicationResponse(BaseModel):
     indicaciones: str | None
     activo: bool
     fecha_registro: datetime
+
+    @computed_field
+    @property
+    def vigente(self) -> bool:
+        """Active and within its date range on today's calendar (APP_TIMEZONE)."""
+        today = local_today()
+        return self.activo and self.fecha_inicio <= today and (self.fecha_fin is None or self.fecha_fin >= today)
