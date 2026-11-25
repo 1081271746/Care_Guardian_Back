@@ -28,6 +28,7 @@ NOT_FOUND = "Nota no encontrada"
     "/patients/{patient_id}",
     response_model=CaregiverNoteResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Crear nota"
 )
 def create_note(
     patient_id: int,
@@ -58,7 +59,8 @@ def create_note(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[CaregiverNoteResponse]
+    response_model=list[CaregiverNoteResponse],
+    summary="Historial de notas"
 )
 def get_patient_notes(
     patient_id: int,
@@ -79,7 +81,8 @@ def get_patient_notes(
 
 @router.get(
     "/{note_id}",
-    response_model=CaregiverNoteResponse
+    response_model=CaregiverNoteResponse,
+    summary="Consultar nota"
 )
 def get_note(
     note_id: int,
@@ -91,7 +94,8 @@ def get_note(
 
 @router.put(
     "/{note_id}",
-    response_model=CaregiverNoteResponse
+    response_model=CaregiverNoteResponse,
+    summary="Editar nota (solo autor)"
 )
 def update_note(
     note_id: int,
@@ -119,7 +123,9 @@ def update_note(
     return note
 
 
-@router.delete("/{note_id}")
+@router.delete("/{note_id}",
+    summary="Desactivar nota (solo autor)"
+)
 def delete_note(
     note_id: int,
     db: Session = Depends(get_db),
