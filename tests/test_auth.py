@@ -103,3 +103,14 @@ def test_password_change_requires_current_password(env):
     assert client.put(url, headers=headers, json={"password_actual": "mala", "password_nueva": "Nueva2027"}).status_code == 400
     assert client.put(url, headers=headers, json={"password_actual": PASSWORD, "password_nueva": "Nueva2027"}).status_code == 200
     assert client.post("/auth/login", json={"email": "nueva@example.org", "password": "Nueva2027"}).status_code == 200
+
+
+def test_repeated_failures_are_throttled(env, monkeypatch):
+    client, *_ = env
+    monkeypatch.setenv("LOGIN_MAX_FAILURES", "3")
+    register(client)
+    bad = {"email": "nueva@example.org", "password": "Incorrecta1"}
+    assert [client.post("/auth/login", json=bad).status_code for _ in range(3)] == [401, 401, 401]
+    blocked = client.post("/auth/login", json={"email": "nueva@example.org", "password": PASSWORD})
+    assert blocked.status_code == 429
+    assert int(blocked.headers["retry-after"]) > 0

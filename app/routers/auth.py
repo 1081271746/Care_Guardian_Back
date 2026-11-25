@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core import throttle
 from app.core.dependencies import get_current_user
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -29,8 +30,19 @@ INVALID_CREDENTIALS = HTTPException(
 @router.post("/login", summary="Iniciar sesión y obtener un token JWT")
 def login(
     user_data: UserLogin,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+    client = request.client.host if request.client else "desconocido"
+    keys = (f"email:{user_data.email}", f"ip:{client}")
+    wait = throttle.retry_after(*keys)
+    if wait:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos fallidos; espera unos minutos e inténtalo de nuevo",
+            headers={"Retry-After": str(wait)},
+        )
+
     # E-mails are compared case-insensitively; legacy rows may contain capitals.
     user = db.query(User).filter(
         func.lower(User.email) == user_data.email
@@ -39,10 +51,14 @@ def login(
     if user is None:
         # Same password-hashing cost as a real account: no user enumeration by timing.
         spend_password_check(user_data.password)
+        throttle.record_failure(*keys)
         raise INVALID_CREDENTIALS
 
     if not verify_password(user_data.password, user.password_hash):
+        throttle.record_failure(*keys)
         raise INVALID_CREDENTIALS
+
+    throttle.reset(keys[0])
 
     if not user.activo:
         raise HTTPException(

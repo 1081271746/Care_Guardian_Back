@@ -61,6 +61,8 @@ def env(monkeypatch):
         other = AuthHeaders(Authorization="Bearer " + create_access_token({"sub": str(b.id)}))
         monkeypatch.setenv("GROQ_API_KEY", secrets.token_urlsafe())
         monkeypatch.setenv("GROQ_MODEL", "openai/gpt-oss-20b")
+        from app.core import throttle
+        throttle.clear_all()
         with TestClient(app) as client:
             yield client, db, p.id, headers, other
         app.dependency_overrides.clear()
