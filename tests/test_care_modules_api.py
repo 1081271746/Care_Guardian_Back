@@ -126,3 +126,11 @@ def test_rescheduling_a_pending_visit_into_the_past_is_rejected(env):
     assert client.put(url, headers=headers, json={"fecha": yesterday}).status_code == 422
     done = client.put(url, headers=headers, json={"fecha": yesterday, "estado": "completada"})
     assert done.status_code == 200 and done.json()["estado"] == "completada"
+
+
+def test_notes_and_symptoms_show_who_recorded_them(env):
+    client, _, pid, headers, _ = env
+    note = client.post(f"/notes/patients/{pid}", headers=headers, json={"contenido": "Paseo por el jardín"}).json()
+    assert note["autor_nombre"] == "Cuidador prueba"
+    symptoms = client.get(f"/symptoms/patients/{pid}", headers=headers).json()
+    assert symptoms[0]["registrado_por_nombre"] == "Cuidador prueba"

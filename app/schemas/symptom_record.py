@@ -52,3 +52,4 @@ class SymptomRecordResponse(BaseModel):
     nivel_gravedad: str
     fecha_registro: datetime
     activo: bool
+    registrado_por_nombre: str | None = None

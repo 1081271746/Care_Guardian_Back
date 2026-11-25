@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.time import utc_now
 from app.database.base import Base
@@ -73,3 +73,9 @@ class SymptomRecord(Base):
         nullable=False,
         default=True
     )
+
+    registrado_por = relationship("User", lazy="joined", viewonly=True)
+
+    @property
+    def registrado_por_nombre(self) -> str | None:
+        return self.registrado_por.nombre if self.registrado_por is not None else None

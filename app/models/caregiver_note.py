@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.time import utc_now
 from app.database.base import Base
@@ -42,4 +42,9 @@ class CaregiverNote(Base):
         nullable=False,
         default=True
     )
-    
+
+    autor = relationship("User", lazy="joined", viewonly=True)
+
+    @property
+    def autor_nombre(self) -> str | None:
+        return self.autor.nombre if self.autor is not None else None

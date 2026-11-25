@@ -31,3 +31,4 @@ class CaregiverNoteResponse(BaseModel):
     contenido: str
     fecha_registro: datetime
     activo: bool
+    autor_nombre: str | None = None
