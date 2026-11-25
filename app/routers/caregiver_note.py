@@ -64,8 +64,7 @@ def create_note(
     )
 
     db.add(new_note)
-    db.commit()
-    db.refresh(new_note)
+    db.flush()
 
      # Analizar automáticamente la nota
     analysis_result = analyze_caregiver_note(
@@ -78,6 +77,9 @@ def create_note(
     analysis_result,
     db
 )
+
+    db.commit()
+    db.refresh(new_note)
 
     return new_note
 

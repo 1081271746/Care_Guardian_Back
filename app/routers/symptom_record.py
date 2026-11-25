@@ -68,11 +68,13 @@ def create_symptom_record(
     )
 
     db.add(new_record)
+    db.flush()
+
+    # Analizar automáticamente el nivel de riesgo (misma transacción)
+    generate_alert_from_symptom(new_record, db)
+
     db.commit()
     db.refresh(new_record)
-
-    # Analizar automáticamente el nivel de riesgo
-    generate_alert_from_symptom(new_record, db)
 
     return new_record
 

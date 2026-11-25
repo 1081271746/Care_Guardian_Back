@@ -82,6 +82,7 @@ def analyze_patient(
     result,
     db
 )
+    db.commit()
 
     return {
     "patient_id": patient_id,

@@ -43,8 +43,8 @@ def generate_alert_from_symptom(
     )
 
     db.add(alert)
-    db.commit()
-    db.refresh(alert)
+    # The caller commits, so the source record and its alert are saved atomically.
+    db.flush()
 
     return alert
 
@@ -86,8 +86,8 @@ def generate_alert_from_history(patient_id: int, result, db: Session):
     )
 
     db.add(alert)
-    db.commit()
-    db.refresh(alert)
+    # The caller commits, so the source record and its alert are saved atomically.
+    db.flush()
 
     return alert
 
@@ -130,7 +130,7 @@ def generate_alert_from_note(note, result, db: Session):
     )
 
     db.add(alert)
-    db.commit()
-    db.refresh(alert)
+    # The caller commits, so the source record and its alert are saved atomically.
+    db.flush()
 
     return alert
