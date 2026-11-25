@@ -31,6 +31,7 @@ DUPLICATE_WINDOW = timedelta(hours=24)
     "/patients/{patient_id}",
     response_model=AlertResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Crear alerta manual"
 )
 def create_alert(
     patient_id: int,
@@ -64,7 +65,8 @@ def create_alert(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[AlertResponse]
+    response_model=list[AlertResponse],
+    summary="Alertas del paciente"
 )
 def get_patient_alerts(
     patient_id: int,
@@ -87,7 +89,8 @@ def get_patient_alerts(
 
 @router.get(
     "/{alert_id}",
-    response_model=AlertResponse
+    response_model=AlertResponse,
+    summary="Consultar alerta"
 )
 def get_alert(
     alert_id: int,
@@ -99,7 +102,8 @@ def get_alert(
 
 @router.put(
     "/{alert_id}",
-    response_model=AlertResponse
+    response_model=AlertResponse,
+    summary="Cambiar estado o contenido de una alerta"
 )
 def update_alert(
     alert_id: int,
@@ -124,7 +128,9 @@ def update_alert(
     return alert
 
 
-@router.delete("/{alert_id}")
+@router.delete("/{alert_id}",
+    summary="Descartar alerta"
+)
 def delete_alert(
     alert_id: int,
     db: Session = Depends(get_db),
