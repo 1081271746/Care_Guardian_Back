@@ -27,7 +27,11 @@ def _prune(bucket: deque, now: float, window: int) -> None:
 
 
 def retry_after(*keys: str) -> int:
-    """Seconds to wait if any key exceeded the limit, otherwise 0."""
+    """Seconds to wait if any key exceeded the limit, otherwise 0.
+
+    Keys starting with "ip:" get a 5x higher limit: behind the frontend proxy
+    or a shared network many caregivers can share one address.
+    """
     attempts, window = _settings()
     now = time.monotonic()
     wait = 0
@@ -35,7 +39,8 @@ def retry_after(*keys: str) -> int:
         for key in keys:
             bucket = _failures[key]
             _prune(bucket, now, window)
-            if len(bucket) >= attempts:
+            limit = attempts * 5 if key.startswith("ip:") else attempts
+            if len(bucket) >= limit:
                 wait = max(wait, int(window - (now - bucket[0])) + 1)
     return wait
 

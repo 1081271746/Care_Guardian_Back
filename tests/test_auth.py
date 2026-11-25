@@ -114,3 +114,14 @@ def test_repeated_failures_are_throttled(env, monkeypatch):
     blocked = client.post("/auth/login", json={"email": "nueva@example.org", "password": PASSWORD})
     assert blocked.status_code == 429
     assert int(blocked.headers["retry-after"]) > 0
+
+
+def test_shared_address_is_not_blocked_by_another_users_failures(env, monkeypatch):
+    client, *_ = env
+    monkeypatch.setenv("LOGIN_MAX_FAILURES", "2")
+    register(client)
+    register(client, email="otra@example.org")
+    for _ in range(2):
+        client.post("/auth/login", json={"email": "otra@example.org", "password": "Incorrecta1"})
+    # Same client address (TestClient), different account: still allowed.
+    assert client.post("/auth/login", json={"email": "nueva@example.org", "password": PASSWORD}).status_code == 200
