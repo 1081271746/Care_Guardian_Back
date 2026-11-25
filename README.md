@@ -131,3 +131,67 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `PORT` | Railway | Lo define Railway; localmente `8000`. |
 
 Nunca subas `.env` al repositorio (está en `.gitignore`).
+
+## Autenticación y permisos
+
+1. `POST /users/` registra un cuidador (`nombre`, `email`, `password` de 8+
+   caracteres con letras y números). El rol siempre es `cuidador`.
+2. `POST /auth/login` devuelve `access_token`, `token_type` y `expires_in`.
+3. El frontend envía `Authorization: Bearer <token>` en cada petición.
+4. `GET /auth/me` devuelve el perfil y cuántos pacientes tiene asignados.
+
+| Situación | Respuesta |
+|---|---|
+| Sin token, token mal formado, firmado con otra clave, sin `sub` | `401` + `WWW-Authenticate: Bearer` |
+| Token expirado | `401` “Tu sesión expiró; inicia sesión nuevamente” |
+| Usuario desactivado | `403` |
+| Paciente no asignado (exista o no) | `403` (no se revela si existe) |
+| Registro inexistente | `404` |
+
+Quien crea un paciente queda asignado automáticamente. Otros cuidadores se
+agregan desde `POST /patients/{id}/caregivers` por correo. Solo el autor puede
+editar o eliminar sus notas; el resto del equipo puede leerlas.
+
+## Endpoints
+
+Todas las rutas (excepto `/`, `/health`, `/auth/login` y `POST /users/`) exigen token.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/auth/login` | Iniciar sesión |
+| GET | `/auth/me` | Perfil del usuario autenticado |
+| POST | `/users/` | Registrar cuidador |
+| GET/PUT/DELETE | `/users/{id}` | Cuenta propia |
+| PUT | `/users/{id}/password` | Cambiar contraseña (requiere la actual) |
+| GET/POST | `/patients/` | Listar (`?q=`, `?activos=`) / crear |
+| GET/PUT | `/patients/{id}` | Consultar / actualizar |
+| DELETE | `/patients/{id}` | **Desactivar** (el historial se conserva) |
+| GET/POST | `/patients/{id}/caregivers` | Equipo de cuidado / asignar por `email` |
+| DELETE | `/patients/{id}/caregivers/{user_id}` | Desasignar (siempre queda al menos uno) |
+| GET/POST | `/medications/patients/{id}` | Listar (`?activos=`) / registrar |
+| GET/PUT/DELETE | `/medications/{id}` | Consultar / actualizar / suspender |
+| GET/POST | `/appointments/patients/{id}` | Listar (`?proximas=true`) / crear |
+| GET/PUT/DELETE | `/appointments/{id}` | Consultar / actualizar / eliminar |
+| GET/POST | `/symptoms/patients/{id}` | Historial paginado (`limit`, `offset`) / registrar |
+| GET/PUT/DELETE | `/symptoms/{id}` | Consultar / corregir / desactivar |
+| GET/POST | `/notes/patients/{id}` | Historial paginado / crear |
+| GET/PUT/DELETE | `/notes/{id}` | Consultar / editar (autor) / desactivar (autor) |
+| GET/POST | `/alerts/patients/{id}` | Activas (`?incluir_cerradas=`, `?nivel=`) / alerta manual |
+| GET/PUT/DELETE | `/alerts/{id}` | Consultar / cambiar estado / descartar |
+| GET | `/analysis/patients/{id}` | Análisis por reglas de los últimos 10 registros |
+| GET | `/dashboard/summary` | Indicadores de todos los pacientes asignados |
+| GET | `/dashboard/patients/{id}` | Panel de un paciente |
+| GET | `/evolution/ai-status` | ¿Está configurada la IA? (sin secretos) |
+| GET | `/evolution/patients/{id}` | Estadísticas, gráficas e historial (`?desde=&hasta=`) |
+| GET/POST | `/evolution/patients/{id}/analyses` | Resúmenes guardados / generar con Groq |
+| GET | `/evolution/patients/{id}/analyses/{analysis_id}` | Un resumen guardado |
+| GET | `/health` | Estado de la API y de PostgreSQL |
+
+Valores permitidos:
+
+- Citas `estado`: `pendiente`, `confirmada`, `completada`, `cancelada`.
+- Síntomas `nivel_gravedad`: `bajo`, `moderado`, `grave`; `nivel_dolor` y
+  `calidad_sueno` 0–10; `temperatura` 30–45 °C; `fecha_registro` opcional (nunca futura).
+- Alertas `nivel`: `bajo`, `medio`, `alto`; `estado`: `pendiente`, `en_revision`,
+  `atendida`, `descartada` (las dos últimas cierran la alerta).
+- Medicamentos `hora` en formato `HH:MM`; `fecha_fin` ≥ `fecha_inicio`.
