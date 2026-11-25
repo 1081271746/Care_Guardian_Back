@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -66,7 +67,7 @@ class Alert(Base):
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     activa: Mapped[bool] = mapped_column(
