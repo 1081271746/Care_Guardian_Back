@@ -32,7 +32,7 @@ def ai_status(user=Depends(get_current_user)):
     }
 
 
-@router.get("/patients/{patient_id}")
+@router.get("/patients/{patient_id}", summary="Estadísticas, mediciones e historial del período")
 def get_evolution(patient_id: int, period: Period = Depends(period_query),
                   db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id)
@@ -47,7 +47,7 @@ def serialize_analysis(record):
     }
 
 
-@router.get("/patients/{patient_id}/analyses")
+@router.get("/patients/{patient_id}/analyses", summary="Resúmenes con IA guardados")
 def list_analyses(patient_id: int, limit: int = Query(20, ge=1, le=100),
                   offset: int = Query(0, ge=0),
                   db: Session = Depends(get_db), user=Depends(get_current_user)):
@@ -59,7 +59,7 @@ def list_analyses(patient_id: int, limit: int = Query(20, ge=1, le=100),
     return [serialize_analysis(r) for r in records]
 
 
-@router.get("/patients/{patient_id}/analyses/{analysis_id}")
+@router.get("/patients/{patient_id}/analyses/{analysis_id}", summary="Un resumen guardado")
 def get_analysis(patient_id: int, analysis_id: int,
                  db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id)
@@ -71,7 +71,8 @@ def get_analysis(patient_id: int, analysis_id: int,
     return serialize_analysis(record)
 
 
-@router.post("/patients/{patient_id}/analyses", status_code=201)
+@router.post("/patients/{patient_id}/analyses", status_code=201,
+             summary="Generar resumen con Groq (requiere consentimiento)")
 def create_analysis(patient_id: int, body: AnalysisRequest,
                     db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id, active=True)
