@@ -87,7 +87,7 @@ app/
 migrations/    Alembic (001 base, 002 análisis IA, 003 índices y período)
 scripts/       carga de demostración por HTTP (seed_demo.py)
 tests/         pruebas automatizadas
-docs/          notas de entrega y carga
+docs/          AUDITORIA.md (hallazgos y correcciones), CARGA_DEMO.md, ENTREGA.md
 ```
 
 ## Instalación y ejecución local
@@ -299,7 +299,10 @@ TEST_DATABASE_URL=postgresql+psycopg://USER@127.0.0.1:5432/careguardian_test \
   límites, categorías), Groq (éxito, minimización, cuotas, errores, reintento),
   migraciones sobre un esquema heredado en PostgreSQL, persistencia tras abrir
   un motor nuevo y la carga de demostración.
-- GitHub Actions (`.github/workflows/tests.yml`) ejecuta migraciones dos veces y la suite en PostgreSQL 16.
+- GitHub Actions (`.github/workflows/tests.yml`) ejecuta `ruff`, migraciones dos
+  veces y la suite en PostgreSQL 16 con cobertura mínima del 85 %.
+- Atajos: `make test`, `make coverage`, `ruff check .`.
+- Resultado de esta versión: 170 pruebas aprobadas en PostgreSQL 16, cobertura 94 %.
 
 ## Despliegue en Railway
 
