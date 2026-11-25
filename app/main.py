@@ -1,10 +1,12 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.access import enforce_patient_scope
 
@@ -90,6 +92,28 @@ for scoped_router in (
     app.include_router(
         scoped_router,
         dependencies=[Depends(enforce_patient_scope)]
+    )
+
+
+logger = logging.getLogger("careguardian")
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    # Constraint names and SQL can reveal personal data; return a stable message.
+    logger.warning("Integrity error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        {"detail": "El registro entra en conflicto con información existente"},
+        status_code=409,
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error_handler(request: Request, exc: SQLAlchemyError):
+    logger.error("Database error on %s %s: %s", request.method, request.url.path, type(exc).__name__)
+    return JSONResponse(
+        {"detail": "La base de datos no está disponible en este momento"},
+        status_code=503,
     )
 
 
