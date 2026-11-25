@@ -10,6 +10,7 @@ def test_create_validates_and_rejects_duplicates(env):
     created = client.post("/patients/", headers=headers, json={**NEW, "telefono": ""})
     assert created.status_code == 201
     assert created.json()["telefono"] is None
+    assert created.json()["edad"] >= 77
     assert client.post("/patients/", headers=headers, json=NEW).status_code == 409
 
 

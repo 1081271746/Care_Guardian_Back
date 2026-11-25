@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, StringConstraints, computed_field
 from typing import Annotated
 
 from app.schemas.common import BirthDate, OptionalText, Phone, Text
@@ -53,3 +53,11 @@ class PatientResponse(BaseModel):
     telefono_emergencia: str | None
     activo: bool
     fecha_registro: datetime
+
+    @computed_field
+    @property
+    def edad(self) -> int:
+        """Age in whole years, computed on every response (never stored)."""
+        today = date.today()
+        born = self.fecha_nacimiento
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
