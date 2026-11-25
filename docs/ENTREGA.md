@@ -1,4 +1,7 @@
-# Auditoría y entrega
+# Auditoría y entrega (primera iteración)
+
+> Documento histórico de la entrega anterior. La auditoría de noviembre de 2026
+> está en [`AUDITORIA.md`](AUDITORIA.md) y los cambios en [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## Estado de partida
 
