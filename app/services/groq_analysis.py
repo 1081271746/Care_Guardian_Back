@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -81,6 +82,17 @@ def generate_analysis(data):
             response = client.post(
                 GROQ_URL, headers={"Authorization": f"Bearer {api_key}"}, json=payload,
             )
+            strict = payload["response_format"].get("json_schema", {}).get("strict")
+            if response.status_code == 400 and strict:
+                # Groq documents strict mode for gpt-oss, but reports of intermittent
+                # json_validate_failed exist. Retry once in best-effort mode; the
+                # server-side validation below still rejects anything off-schema.
+                logger.info("Groq rechazó el modo estricto; reintento único en modo flexible")
+                flexible = copy.deepcopy(payload)
+                flexible["response_format"]["json_schema"]["strict"] = False
+                response = client.post(
+                    GROQ_URL, headers={"Authorization": f"Bearer {api_key}"}, json=flexible,
+                )
         if response.status_code >= 400:
             raise provider_error(response)
         content = response.json()["choices"][0]["message"]["content"]

@@ -248,3 +248,25 @@ def test_saved_analysis_keeps_period_and_can_be_reopened(env):
     assert detail.json()["resultado"]["revisar"][0].startswith("Temperatura")
     assert client.get(f"{url}/{created['id']}", headers=other).status_code == 403
     assert client.get(f"{url}/999999", headers=headers).status_code == 404
+
+
+def test_strict_schema_rejection_is_retried_once_in_flexible_mode(env):
+    client, db, pid, headers, _ = env
+    rejected = httpx.Response(400, request=httpx.Request("POST", GROQ_URL),
+                              json={"error": {"code": "json_validate_failed"}})
+    with patch("app.services.groq_analysis.GroqHTTPClient.post",
+               side_effect=[rejected, response('{"resumen":["nivel_dolor"],"revisar":[]}')]) as post:
+        result = client.post(f"/evolution/patients/{pid}/analyses", json=BODY, headers=headers)
+    assert result.status_code == 201
+    assert post.call_count == 2
+    assert post.call_args_list[0].kwargs["json"]["response_format"]["json_schema"]["strict"] is True
+    assert post.call_args_list[1].kwargs["json"]["response_format"]["json_schema"]["strict"] is False
+
+
+def test_second_rejection_is_reported_without_more_retries(env):
+    client, _, pid, headers, _ = env
+    rejected = httpx.Response(400, request=httpx.Request("POST", GROQ_URL), json={})
+    with patch("app.services.groq_analysis.GroqHTTPClient.post", return_value=rejected) as post:
+        result = client.post(f"/evolution/patients/{pid}/analyses", json=BODY, headers=headers)
+    assert result.status_code == 502
+    assert post.call_count == 2
