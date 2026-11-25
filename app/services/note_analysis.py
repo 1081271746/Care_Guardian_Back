@@ -2,6 +2,35 @@ from dataclasses import dataclass
 import re
 
 
+NEGATION_WORDS = {"no", "sin", "nunca", "tampoco", "ni"}
+LINKING_VERBS = {"está", "esta", "estuvo", "tiene", "tuvo", "presenta", "presentó", "presento",
+                 "se", "ha", "hay", "parece", "siente", "sintió", "sintio"}
+
+
+def _negated(before: str) -> bool:
+    words = before.replace(",", " ").split()[-2:]
+    if words and words[-1] in NEGATION_WORDS:
+        return True
+    return len(words) == 2 and words[0] in NEGATION_WORDS and words[1] in LINKING_VERBS
+
+
+def _mentions(texto: str, patrones) -> bool:
+    """True when a pattern appears without a negation right before it.
+
+    "no tiene fiebre", "sin fiebre" or "no está triste" must not raise an
+    alert, while "no quiso comer" or "no pudo dormir" are themselves
+    negative patterns and keep matching.
+    """
+    for patron in patrones:
+        start = texto.find(patron)
+        while start != -1:
+            own_negation = patron.split()[0] in NEGATION_WORDS
+            if own_negation or not _negated(texto[max(0, start - 30):start]):
+                return True
+            start = texto.find(patron, start + 1)
+    return False
+
+
 @dataclass
 class NoteAnalysisResult:
     score: int
@@ -44,7 +73,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
     "insomnio"
 ]
 
-    if any(patron in texto_limpio for patron in patrones_sueno):
+    if _mentions(texto_limpio, patrones_sueno):
         score += 2
         factores.append("Alteración del sueño")
 
@@ -62,7 +91,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         "rechazo la comida"
     ]
 
-    if any(patron in texto_limpio for patron in patrones_apetito):
+    if _mentions(texto_limpio, patrones_apetito):
         score += 2
         factores.append("Disminución del apetito")
 
@@ -82,7 +111,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         "debil"
     ]
 
-    if any(patron in texto_limpio for patron in patrones_cansancio):
+    if _mentions(texto_limpio, patrones_cansancio):
         score += 2
         factores.append("Cansancio o debilidad")
 
@@ -98,7 +127,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         "se queja de dolor"
     ]
 
-    if any(patron in texto_limpio for patron in patrones_dolor):
+    if _mentions(texto_limpio, patrones_dolor):
         score += 2
         factores.append("Presencia de dolor")
 
@@ -128,7 +157,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
     "irritable"
 ]
 
-    if any(patron in texto_limpio for patron in patrones_animo):
+    if _mentions(texto_limpio, patrones_animo):
         score += 2
         factores.append("Cambio en el estado de ánimo")
 
@@ -146,7 +175,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         "se olvido"
     ]
 
-    if any(patron in texto_limpio for patron in patrones_desorientacion):
+    if _mentions(texto_limpio, patrones_desorientacion):
         score += 3
         factores.append("Posible desorientación o confusión")
 
@@ -161,7 +190,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         "temperatura elevada"
     ]
 
-    if any(patron in texto_limpio for patron in patrones_fiebre):
+    if _mentions(texto_limpio, patrones_fiebre):
         score += 3
         factores.append("Posible fiebre o temperatura elevada")
 

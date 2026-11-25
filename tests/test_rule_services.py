@@ -61,3 +61,17 @@ def test_note_patterns(text, factor):
 def test_neutral_note_has_no_factors():
     result = analyze_caregiver_note("Caminamos por el parque y almorzó completo.")
     assert result.factores == [] and result.nivel == "bajo"
+
+
+@pytest.mark.parametrize("text", [
+    "No tiene fiebre y no tiene dolor.",
+    "Hoy no está triste, sin fiebre.",
+    "Ni triste ni ansioso; no presenta dolor.",
+])
+def test_negated_mentions_do_not_raise_note_alerts(text):
+    assert analyze_caregiver_note(text).factores == []
+
+
+def test_negative_patterns_still_match():
+    factores = analyze_caregiver_note("No quiso comer y no pudo dormir.").factores
+    assert factores == ["Alteración del sueño", "Disminución del apetito"]
