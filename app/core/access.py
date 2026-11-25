@@ -57,7 +57,7 @@ def enforce_patient_scope(
         try:
             return int(params[key])
         except (TypeError, ValueError):
-            raise HTTPException(422, "El identificador debe ser un número entero")
+            raise HTTPException(422, "El identificador debe ser un número entero") from None
     if "patient_id" in params:
         require_patient(db, user, identifier("patient_id"))
         return

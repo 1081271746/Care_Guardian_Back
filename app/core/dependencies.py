@@ -46,18 +46,18 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tu sesión expiró; inicia sesión nuevamente",
             headers=UNAUTHORIZED_HEADERS,
-        )
+        ) from None
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
             headers=UNAUTHORIZED_HEADERS,
-        )
+        ) from None
 
     try:
         user = db.get(User, int(user_id))
     except (TypeError, ValueError):
-        raise HTTPException(status_code=401, detail="Token inválido", headers=UNAUTHORIZED_HEADERS)
+        raise HTTPException(status_code=401, detail="Token inválido", headers=UNAUTHORIZED_HEADERS) from None
 
     if user is None:
         raise HTTPException(

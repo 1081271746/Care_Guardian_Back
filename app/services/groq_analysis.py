@@ -116,11 +116,11 @@ def generate_analysis(data):
         }
     except httpx.TimeoutException:
         logger.warning("Groq no respondió en el tiempo configurado")
-        raise HTTPException(504, "Groq no respondió a tiempo; tus registros siguen disponibles")
+        raise HTTPException(504, "Groq no respondió a tiempo; tus registros siguen disponibles") from None
     except httpx.HTTPError as error:
         logger.warning("No fue posible contactar a Groq: %s", type(error).__name__)
-        raise HTTPException(502, "No fue posible contactar a Groq")
+        raise HTTPException(502, "No fue posible contactar a Groq") from None
     except (ValidationError, ValueError, KeyError, IndexError, TypeError) as error:
         # Never expose provider bodies, keys or sensitive request data.
         logger.warning("Respuesta de Groq descartada por validación: %s", type(error).__name__)
-        raise HTTPException(502, "No se pudo obtener una respuesta válida de Groq")
+        raise HTTPException(502, "No se pudo obtener una respuesta válida de Groq") from None

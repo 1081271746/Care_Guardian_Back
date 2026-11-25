@@ -21,7 +21,7 @@ def resolve_zone(name: str | None):
     try:
         return app_timezone(name)
     except ValueError:
-        raise HTTPException(422, "Zona horaria no válida")
+        raise HTTPException(422, "Zona horaria no válida") from None
 
 
 def period_query(desde: date | None = None, hasta: date | None = None):
@@ -123,7 +123,7 @@ def create_analysis(patient_id: int, body: AnalysisRequest,
         attempt.status = "failed"
         attempt.error = "Error inesperado"
         db.commit()
-        raise HTTPException(502, "No se pudo completar el análisis con Groq")
+        raise HTTPException(502, "No se pudo completar el análisis con Groq") from None
     attempt.status = "completed"
     attempt.result = result
     db.commit()

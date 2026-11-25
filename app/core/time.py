@@ -27,8 +27,8 @@ def app_timezone(name: str | None = None) -> ZoneInfo:
     candidate = name or os.getenv("APP_TIMEZONE", DEFAULT_TIMEZONE)
     try:
         return _zone(candidate)
-    except (ZoneInfoNotFoundError, ValueError):
-        raise ValueError(f"Zona horaria no válida: {candidate}")
+    except (ZoneInfoNotFoundError, ValueError) as error:
+        raise ValueError(f"Zona horaria no válida: {candidate}") from error
 
 
 def local_today(name: str | None = None) -> date:

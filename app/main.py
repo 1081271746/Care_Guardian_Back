@@ -55,16 +55,16 @@ async def lifespan(app):
         if not 1 <= timeout <= 120 or rpm < 1:
             raise ValueError()
 
-    except ValueError:
+    except ValueError as error:
         raise RuntimeError(
             "Revisa GROQ_TIMEOUT_SECONDS (1–120) "
             "y GROQ_REQUESTS_PER_MINUTE (entero positivo)"
-        )
+        ) from error
 
     try:
         app_timezone()
     except ValueError as error:
-        raise RuntimeError(f"Revisa APP_TIMEZONE: {error}")
+        raise RuntimeError(f"Revisa APP_TIMEZONE: {error}") from error
 
     yield
     engine.dispose()
