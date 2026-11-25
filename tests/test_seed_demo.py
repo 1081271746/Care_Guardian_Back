@@ -115,3 +115,19 @@ def test_ambiguous_post_transport_failure_is_not_retried():
         assert count == 1
     finally:
         client.close()
+
+
+def test_demo_records_are_labelled_spread_in_time_and_never_future():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 25, 15, tzinfo=timezone.utc)
+    stamps = set()
+    for index in range(40):
+        symptom = resource_payload("t", "symptoms", index, date(2026, 11, 25), now)
+        assert symptom["observaciones"].startswith("CG-DEMO-t-symptoms-")
+        moment = datetime.fromisoformat(symptom["fecha_registro"])
+        assert moment < now
+        stamps.add(moment.date())
+    assert len(stamps) >= 14  # enough distinct days for the Evolución charts
+    assert "(demo)" in patient_payload("t", 0)["nombres"]
+    assert "(demo)" in resource_payload("t", "medications", 0)["nombre"]
+    assert "(demo)" in resource_payload("t", "alerts", 0)["titulo"]
