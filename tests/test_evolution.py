@@ -114,7 +114,7 @@ def test_groq_unavailable(env, error, expected):
     assert client.get(f"/evolution/patients/{pid}", headers=headers).status_code == 200
 
 
-@pytest.mark.parametrize("status,expected", [(401, 502), (429, 503), (500, 502)])
+@pytest.mark.parametrize("status,expected", [(401, 503), (404, 503), (429, 429), (500, 502)])
 def test_provider_http_errors(env, status, expected):
     client, _, pid, headers, _ = env
     with patch("app.services.groq_analysis.GroqHTTPClient.post", return_value=response("", status)):
@@ -208,3 +208,15 @@ def test_category_facts_never_leak_free_text(env):
     assert data["categorias"]["estado_animo"] == {"triste": 1}
     assert "María" not in json.dumps(data["hechos"], ensure_ascii=False)
     assert "categorias_nivel_gravedad" in data["hechos"]
+
+
+def test_groq_rate_limit_is_forwarded_with_retry_after(env):
+    client, db, pid, headers, _ = env
+    limited = httpx.Response(429, headers={"retry-after": "12"}, request=httpx.Request("POST", GROQ_URL),
+                             json={"error": {"message": "SECRET provider detail"}})
+    with patch("app.services.groq_analysis.GroqHTTPClient.post", return_value=limited):
+        result = client.post(f"/evolution/patients/{pid}/analyses", json=BODY, headers=headers)
+    assert result.status_code == 429
+    assert result.headers["retry-after"] == "12"
+    assert "SECRET" not in result.text
+    assert db.query(EvolutionAnalysis).one().status == "failed"

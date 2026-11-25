@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import httpx
 from fastapi import HTTPException
@@ -6,6 +7,31 @@ from pydantic import ValidationError
 from app.schemas.evolution import AISelection, DISCLAIMER
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+logger = logging.getLogger("careguardian.groq")
+
+
+def _retry_after(response) -> str:
+    try:
+        seconds = int(float(response.headers.get("retry-after", "60")))
+    except ValueError:
+        seconds = 60
+    return str(max(1, min(seconds, 300)))
+
+
+def provider_error(response):
+    """Translate provider statuses without forwarding their bodies."""
+    status = response.status_code
+    logger.warning("Groq respondió HTTP %s", status)
+    if status == 429:
+        return HTTPException(429, "Groq alcanzó su límite de solicitudes; inténtalo en unos segundos",
+                             headers={"Retry-After": _retry_after(response)})
+    if status in (401, 403):
+        return HTTPException(503, "La credencial de Groq configurada en el servidor no es válida")
+    if status == 404:
+        return HTTPException(503, "El modelo de Groq configurado no está disponible")
+    if status == 400:
+        return HTTPException(502, "Groq rechazó la solicitud de análisis")
+    return HTTPException(502, "Groq no está disponible en este momento")
 
 class GroqHTTPClient(httpx.Client):
     """Dedicated client type so provider mocks never intercept the API test client."""
@@ -55,9 +81,8 @@ def generate_analysis(data):
             response = client.post(
                 GROQ_URL, headers={"Authorization": f"Bearer {api_key}"}, json=payload,
             )
-        if response.status_code == 429:
-            raise HTTPException(503, "Groq está ocupado; inténtalo más tarde")
-        response.raise_for_status()
+        if response.status_code >= 400:
+            raise provider_error(response)
         content = response.json()["choices"][0]["message"]["content"]
         if len(content) > 12000:
             raise ValueError("Output too large")
@@ -72,7 +97,12 @@ def generate_analysis(data):
             "metodo": "Groq selecciona hechos; el servidor muestra únicamente textos verificados.",
         }
     except httpx.TimeoutException:
+        logger.warning("Groq no respondió en el tiempo configurado")
         raise HTTPException(504, "Groq no respondió a tiempo; tus registros siguen disponibles")
-    except (httpx.HTTPError, ValidationError, ValueError, KeyError, IndexError, TypeError):
+    except httpx.HTTPError as error:
+        logger.warning("No fue posible contactar a Groq: %s", type(error).__name__)
+        raise HTTPException(502, "No fue posible contactar a Groq")
+    except (ValidationError, ValueError, KeyError, IndexError, TypeError) as error:
         # Never expose provider bodies, keys or sensitive request data.
+        logger.warning("Respuesta de Groq descartada por validación: %s", type(error).__name__)
         raise HTTPException(502, "No se pudo obtener una respuesta válida de Groq")
