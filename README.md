@@ -195,3 +195,66 @@ Valores permitidos:
 - Alertas `nivel`: `bajo`, `medio`, `alto`; `estado`: `pendiente`, `en_revision`,
   `atendida`, `descartada` (las dos últimas cierran la alerta).
 - Medicamentos `hora` en formato `HH:MM`; `fecha_fin` ≥ `fecha_inicio`.
+
+## Base de datos y migraciones
+
+```sh
+alembic upgrade head      # aplicar (idempotente; se puede ejecutar varias veces)
+alembic current           # revisión aplicada
+```
+
+| Revisión | Cambios |
+|---|---|
+| `001_existing` | Crea las tablas originales que falten; no toca las existentes. |
+| `002_evolution` | Tabla `evolution_analyses` (consentimiento, modelo, estado, resultado). |
+| `003_indexes_period` | Índices por `patient_id`, índice único de asignaciones (se omite si ya hay duplicados, sin borrarlos) y columnas `period_start`, `period_end`, `error`. |
+
+Reglas del proyecto:
+
+- Las migraciones solo **agregan** (tablas, columnas anulables, índices).
+  `downgrade` está bloqueado a propósito para no perder datos.
+- Railway ejecuta `alembic upgrade head` como `preDeployCommand` antes de cada despliegue.
+- Las fechas/horas se guardan en UTC (`timestamptz`). La zona de los
+  cuidadores (`APP_TIMEZONE`) solo se usa para calcular días de calendario.
+- Pacientes, medicamentos, síntomas, notas y alertas se **desactivan** en lugar
+  de borrarse, para que el historial y la evolución sigan completos.
+
+## Integración con Groq
+
+Archivo: `app/services/groq_analysis.py`. Modelo: `openai/gpt-oss-20b`.
+
+Recorrido real:
+
+1. El cuidador elige un paciente y un período en **Evolución**.
+2. La API consulta PostgreSQL (síntomas, medicamentos, citas, notas y alertas del período).
+3. `app/services/evolution.py` calcula estadísticas y redacta **hechos verificados**
+   (frases cortas con conteos y promedios). No incluye nombres, documentos,
+   fechas exactas, textos de notas ni observaciones; las categorías libres
+   que no son conocidas se cuentan como “otro”.
+4. El cuidador marca la casilla de consentimiento. El backend exige
+   `consentimiento: true` y `version_consentimiento: "groq-minimized-v1"`
+   (validado en Pydantic, no solo en Angular).
+5. Se registra el intento en `evolution_analyses` (estado `pending`) y se aplica
+   el límite por minuto con un bloqueo de fila en PostgreSQL.
+6. Se llama a `https://api.groq.com/openai/v1/chat/completions` con salida
+   estructurada estricta (`json_schema`, `strict: true`): Groq solo puede
+   devolver **identificadores** de hechos. Si Groq rechaza el modo estricto, se
+   reintenta una vez en modo flexible.
+7. El servidor valida el JSON con Pydantic (`extra="forbid"`) y que cada
+   identificador exista; si algo no cuadra, el intento queda `failed` y no se muestra nada.
+8. Se guarda el resultado (`completed`) con fecha, período, modelo y versión del consentimiento.
+9. El frontend muestra el resultado guardado y el historial desde `GET .../analyses`.
+
+Errores (nunca se reenvía el cuerpo de Groq ni la clave):
+
+| Caso | Respuesta |
+|---|---|
+| Sin `GROQ_API_KEY`/`GROQ_MODEL` | `503` “El análisis IA no está configurado” |
+| Menos de dos mediciones de un indicador | `422` |
+| Límite propio por minuto | `429` + `Retry-After: 60` |
+| Límite de Groq | `429` + `Retry-After` de Groq (máx. 300 s) |
+| Clave inválida / modelo inexistente | `503` con mensaje accionable |
+| Tiempo agotado | `504` |
+| Respuesta inválida o error del proveedor | `502` |
+
+Comprobar la configuración sin exponer secretos: `GET /evolution/ai-status`.
