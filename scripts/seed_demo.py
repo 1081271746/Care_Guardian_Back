@@ -12,7 +12,8 @@ from .seed_runner import run_seed, validate_counts
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="Crear registros mediante la API")
-    parser.add_argument("--confirm-production", action="store_true", help="Autorizar escrituras en un servidor no local")
+    parser.add_argument("--confirm-production", action="store_true",
+                        help="Autorizar escrituras en un servidor no local")
     parser.add_argument("--namespace", default="carlos-demo-v1")
     parser.add_argument("--create-account", action="store_true",
                         help="Registrar SEED_EMAIL mediante POST /users/ si todavía no existe")
@@ -50,7 +51,8 @@ def main(argv=None):
         return 1
     except Exception:
         # Never print library errors that may contain request credentials.
-        print("Carga detenida por un error inesperado; verifica los registros remotos antes de reintentar.", file=sys.stderr)
+        print("Carga detenida por un error inesperado; verifica los registros remotos antes de reintentar.",
+              file=sys.stderr)
         return 1
     finally:
         if client:

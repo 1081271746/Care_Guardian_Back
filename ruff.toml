@@ -5,3 +5,6 @@ extend-exclude = ["migrations/versions"]
 [lint]
 select = ["E", "F", "W", "I001", "B"]
 ignore = ["E712", "B008"]  # SQLAlchemy comparisons; FastAPI Depends() defaults
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]  # long assertion payloads read better on one line

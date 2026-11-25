@@ -74,7 +74,9 @@ def evolution(db, patient_id, period, zone=None):
         if active:
             query = query.filter(getattr(model, active).is_(True))
         # The timeline uses the occurrence date of appointments and medication starts.
-        column = model.fecha if kind == "cita" else model.fecha_inicio if kind == "medicamento" else model.fecha_registro
+        column = (model.fecha if kind == "cita"
+                  else model.fecha_inicio if kind == "medicamento"
+                  else model.fecha_registro)
         calendar = kind in ("cita", "medicamento")
         if period.desde and (calendar or start):
             query = query.filter(column >= (period.desde if calendar else start))

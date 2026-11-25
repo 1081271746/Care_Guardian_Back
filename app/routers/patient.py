@@ -24,7 +24,12 @@ def document_taken(db: Session, documento: str, *, exclude_id: int | None = None
     return query.first() is not None
 
 
-@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED, summary="Registrar paciente (queda asignado a quien lo crea)")
+@router.post(
+    "/",
+    response_model=PatientResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar paciente (queda asignado a quien lo crea)",
+)
 def create_patient(
     patient_data: PatientCreate,
     db: Session = Depends(get_db),
@@ -136,7 +141,11 @@ def delete_patient(
     }
 
 
-@router.post("/{patient_id}/caregivers", status_code=status.HTTP_201_CREATED, summary="Asignar cuidador por correo o id")
+@router.post(
+    "/{patient_id}/caregivers",
+    status_code=status.HTTP_201_CREATED,
+    summary="Asignar cuidador por correo o id",
+)
 def assign_caregiver(
     patient_id: int,
     assignment: CaregiverAssignmentCreate,

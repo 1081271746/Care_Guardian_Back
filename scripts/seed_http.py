@@ -36,7 +36,9 @@ class SeedClient:
         try:
             return self._http.request(method, path.lstrip("/"), **kwargs)
         except httpx.HTTPError:
-            raise SeedError("Error de transporte; no se reintentó ninguna escritura. Reejecuta para reconciliar.") from None
+            raise SeedError(
+                "Error de transporte; no se reintentó ninguna escritura. Reejecuta para reconciliar."
+            ) from None
 
     def login(self):
         response = self._send("POST", "/auth/login",
