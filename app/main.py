@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, Request
@@ -168,7 +169,12 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError):
 
 @app.middleware("http")
 async def private_responses(request, call_next):
+    # Correlates a user-visible error with server logs without logging payloads.
+    incoming = request.headers.get("x-request-id", "")
+    request_id = incoming if incoming.isalnum() and len(incoming) <= 64 else uuid.uuid4().hex
+    request.state.request_id = request_id
     response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"

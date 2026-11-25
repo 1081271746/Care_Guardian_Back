@@ -65,3 +65,11 @@ def test_published_secret_key_is_refused(monkeypatch):
 
     with pytest.raises(RuntimeError, match="publicado"):
         asyncio.run(start())
+
+
+def test_request_id_is_generated_or_propagated(env):
+    client, *_ = env
+    generated = client.get("/health").headers["x-request-id"]
+    assert len(generated) == 32
+    assert client.get("/health", headers={"X-Request-ID": "abc123"}).headers["x-request-id"] == "abc123"
+    assert client.get("/health", headers={"X-Request-ID": "bad id\\n"}).headers["x-request-id"] != "bad id\\n"
