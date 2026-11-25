@@ -26,6 +26,7 @@ NOT_FOUND = "Cita no encontrada"
     "/patients/{patient_id}",
     response_model=AppointmentResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Programar cita"
 )
 def create_appointment(
     patient_id: int,
@@ -52,7 +53,8 @@ def create_appointment(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[AppointmentResponse]
+    response_model=list[AppointmentResponse],
+    summary="Citas del paciente"
 )
 def get_patient_appointments(
     patient_id: int,
@@ -74,7 +76,8 @@ def get_patient_appointments(
 
 @router.get(
     "/{appointment_id}",
-    response_model=AppointmentResponse
+    response_model=AppointmentResponse,
+    summary="Consultar cita"
 )
 def get_appointment(
     appointment_id: int,
@@ -86,7 +89,8 @@ def get_appointment(
 
 @router.put(
     "/{appointment_id}",
-    response_model=AppointmentResponse
+    response_model=AppointmentResponse,
+    summary="Actualizar o cambiar estado de una cita"
 )
 def update_appointment(
     appointment_id: int,
@@ -118,7 +122,9 @@ def update_appointment(
     return appointment
 
 
-@router.delete("/{appointment_id}")
+@router.delete("/{appointment_id}",
+    summary="Eliminar cita"
+)
 def delete_appointment(
     appointment_id: int,
     db: Session = Depends(get_db),
