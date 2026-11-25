@@ -30,7 +30,7 @@ def document_taken(db: Session, documento: str, *, exclude_id: int | None = None
     return query.first() is not None
 
 
-@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED, summary="Registrar paciente (queda asignado a quien lo crea)")
 def create_patient(
     patient_data: PatientCreate,
     db: Session = Depends(get_db),
@@ -62,7 +62,7 @@ def create_patient(
     return new_patient
 
 
-@router.get("/", response_model=list[PatientResponse])
+@router.get("/", response_model=list[PatientResponse], summary="Pacientes asignados")
 def get_patients(
     q: str | None = Query(None, max_length=100, description="Buscar por nombre o documento"),
     activos: bool | None = Query(None, description="Filtrar por estado"),
@@ -84,7 +84,7 @@ def get_patients(
     return query.order_by(Patient.apellidos.asc(), Patient.nombres.asc(), Patient.id.asc()).all()
 
 
-@router.get("/{patient_id}", response_model=PatientResponse)
+@router.get("/{patient_id}", response_model=PatientResponse, summary="Consultar paciente")
 def get_patient(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -94,7 +94,7 @@ def get_patient(
     return require_patient(db, current_user, patient_id)
 
 
-@router.put("/{patient_id}", response_model=PatientResponse)
+@router.put("/{patient_id}", response_model=PatientResponse, summary="Actualizar paciente")
 def update_patient(
     patient_id: int,
     patient_data: PatientUpdate,
@@ -124,7 +124,7 @@ def update_patient(
     return patient
 
 
-@router.delete("/{patient_id}")
+@router.delete("/{patient_id}", summary="Desactivar paciente (conserva el historial)")
 def delete_patient(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -142,7 +142,7 @@ def delete_patient(
     }
 
 
-@router.post("/{patient_id}/caregivers", status_code=status.HTTP_201_CREATED)
+@router.post("/{patient_id}/caregivers", status_code=status.HTTP_201_CREATED, summary="Asignar cuidador por correo o id")
 def assign_caregiver(
     patient_id: int,
     assignment: CaregiverAssignmentCreate,
@@ -201,7 +201,7 @@ def assign_caregiver(
     }
 
 
-@router.get("/{patient_id}/caregivers", response_model=list[CaregiverResponse])
+@router.get("/{patient_id}/caregivers", response_model=list[CaregiverResponse], summary="Equipo de cuidado")
 def get_patient_caregivers(
     patient_id: int,
     db: Session = Depends(get_db),
@@ -223,7 +223,7 @@ def get_patient_caregivers(
     ]
 
 
-@router.delete("/{patient_id}/caregivers/{user_id}")
+@router.delete("/{patient_id}/caregivers/{user_id}", summary="Desasignar cuidador")
 def remove_caregiver(
     patient_id: int,
     user_id: int,
