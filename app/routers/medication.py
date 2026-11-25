@@ -25,6 +25,7 @@ NOT_FOUND = "Medicamento no encontrado"
     "/patients/{patient_id}",
     response_model=MedicationResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Registrar medicamento"
 )
 def create_medication(
     patient_id: int,
@@ -45,7 +46,8 @@ def create_medication(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[MedicationResponse]
+    response_model=list[MedicationResponse],
+    summary="Medicamentos del paciente"
 )
 def get_patient_medications(
     patient_id: int,
@@ -66,7 +68,8 @@ def get_patient_medications(
 
 @router.get(
     "/{medication_id}",
-    response_model=MedicationResponse
+    response_model=MedicationResponse,
+    summary="Consultar medicamento"
 )
 def get_medication(
     medication_id: int,
@@ -78,7 +81,8 @@ def get_medication(
 
 @router.put(
     "/{medication_id}",
-    response_model=MedicationResponse
+    response_model=MedicationResponse,
+    summary="Actualizar medicamento"
 )
 def update_medication(
     medication_id: int,
@@ -110,7 +114,9 @@ def update_medication(
     return medication
 
 
-@router.delete("/{medication_id}")
+@router.delete("/{medication_id}",
+    summary="Suspender medicamento (conserva el historial)"
+)
 def delete_medication(
     medication_id: int,
     db: Session = Depends(get_db),
