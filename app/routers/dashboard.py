@@ -16,6 +16,7 @@ from app.schemas.appointment import AppointmentResponse
 from app.schemas.caregiver_note import CaregiverNoteResponse
 from app.schemas.medication import MedicationResponse
 from app.schemas.symptom_record import SymptomRecordResponse
+from app.services.dashboard_summary import build_summary
 from app.services.historical_analysis import analyze_patient_history
 
 
@@ -30,6 +31,14 @@ RECENT_ITEMS = 5
 
 def serialize(schema, rows):
     return [schema.model_validate(row).model_dump(mode="json") for row in rows]
+
+
+@router.get("/summary", summary="Indicadores de todos los pacientes asignados")
+def get_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return build_summary(db, current_user)
 
 
 @router.get("/patients/{patient_id}", summary="Panel de un paciente")
