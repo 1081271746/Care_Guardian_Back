@@ -270,3 +270,16 @@ def test_second_rejection_is_reported_without_more_retries(env):
         result = client.post(f"/evolution/patients/{pid}/analyses", json=BODY, headers=headers)
     assert result.status_code == 502
     assert post.call_count == 2
+
+
+def test_analysis_history_is_paginated_newest_first(env, monkeypatch):
+    client, db, pid, headers, _ = env
+    monkeypatch.setenv("GROQ_REQUESTS_PER_MINUTE", "5")
+    url = f"/evolution/patients/{pid}/analyses"
+    with patch("app.services.groq_analysis.GroqHTTPClient.post",
+               return_value=response('{"resumen":["nivel_dolor"],"revisar":[]}')):
+        ids = [client.post(url, json=BODY, headers=headers).json()["id"] for _ in range(3)]
+    first_page = client.get(url + "?limit=2", headers=headers).json()
+    second_page = client.get(url + "?limit=2&offset=2", headers=headers).json()
+    assert [a["id"] for a in first_page] == ids[::-1][:2]
+    assert [a["id"] for a in second_page] == ids[:1]
