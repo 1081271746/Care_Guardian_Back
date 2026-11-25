@@ -1,18 +1,14 @@
-from app.core.dependencies import get_current_user
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import APIRouter, Depends
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
+from app.core.security import hash_password, verify_password
 from app.database.connection import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
-from app.core.security import hash_password
-
-
-def require_self(user_id, current_user):
-    if user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="No tienes acceso a este usuario")
-
+from app.schemas.user import PasswordChange, UserCreate, UserResponse, UserUpdate
 
 
 router = APIRouter(
@@ -21,19 +17,39 @@ router = APIRouter(
 )
 
 
+def require_self(user_id: int, current_user: User) -> None:
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este usuario")
 
-@router.post("/")
+
+def registration_enabled() -> bool:
+    return os.getenv("ALLOW_PUBLIC_REGISTRATION", "true").strip().lower() in {"1", "true", "yes", "si", "sí"}
+
+
+def email_taken(db: Session, email: str, *, exclude_id: int | None = None) -> bool:
+    query = db.query(User.id).filter(func.lower(User.email) == email.lower())
+    if exclude_id is not None:
+        query = query.filter(User.id != exclude_id)
+    return query.first() is not None
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Registrar un cuidador")
 def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
-    hashed_password = hash_password(user_data.password)
+    if not registration_enabled():
+        raise HTTPException(status_code=403, detail="El registro público está deshabilitado")
+
+    if email_taken(db, user_data.email):
+        raise HTTPException(status_code=409, detail="Ya existe una cuenta con ese correo")
 
     new_user = User(
         nombre=user_data.nombre,
         email=user_data.email,
-        password_hash=hashed_password,
-        rol="cuidador"
+        password_hash=hash_password(user_data.password),
+        # The role is never taken from the request body.
+        rol="cuidador",
     )
 
     db.add(new_user)
@@ -51,27 +67,17 @@ def create_user(
     }
 
 
-@router.get("/", response_model=list[UserResponse])
-def get_users(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    users = db.query(User).filter(User.id == current_user.id).all()
-    return users
+@router.get("/", response_model=list[UserResponse], summary="Cuenta propia (lista de uno)")
+def get_users(current_user: User = Depends(get_current_user)):
+    # Caregivers never list other accounts.
+    return [current_user]
+
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db),
-             current_user: User = Depends(get_current_user)):
+def get_user(user_id: int, current_user: User = Depends(get_current_user)):
     require_self(user_id, current_user)
-    user = db.get(User, user_id)
+    return current_user
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Usuario no encontrado"
-        )
-
-    return user
 
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(
@@ -83,30 +89,38 @@ def update_user(
     require_self(user_id, current_user)
     if user_data.rol is not None and user_data.rol != current_user.rol:
         raise HTTPException(status_code=403, detail="No puedes cambiar tu rol")
-    user = db.get(User, user_id)
 
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Usuario no encontrado"
-        )
+    if user_data.email is not None and email_taken(db, user_data.email, exclude_id=user_id):
+        raise HTTPException(status_code=409, detail="Ya existe una cuenta con ese correo")
 
     if user_data.nombre is not None:
-        user.nombre = user_data.nombre
+        current_user.nombre = user_data.nombre
 
     if user_data.email is not None:
-        user.email = user_data.email
-
-    if user_data.rol is not None:
-        user.rol = user_data.rol
+        current_user.email = user_data.email
 
     if user_data.activo is not None:
-        user.activo = user_data.activo
+        current_user.activo = user_data.activo
 
     db.commit()
-    db.refresh(user)
+    db.refresh(current_user)
 
-    return user
+    return current_user
+
+
+@router.put("/{user_id}/password", summary="Cambiar la contraseña propia")
+def change_password(
+    user_id: int,
+    body: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_self(user_id, current_user)
+    if not verify_password(body.password_actual, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
+    current_user.password_hash = hash_password(body.password_nueva)
+    db.commit()
+    return {"mensaje": "Contraseña actualizada correctamente"}
 
 
 @router.delete("/{user_id}")
@@ -116,15 +130,7 @@ def delete_user(
     current_user: User = Depends(get_current_user)
 ):
     require_self(user_id, current_user)
-    user = db.get(User, user_id)
-
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Usuario no encontrado"
-        )
-
-    db.delete(user)
+    db.delete(current_user)
     db.commit()
 
     return {
