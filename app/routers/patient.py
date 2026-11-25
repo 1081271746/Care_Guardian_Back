@@ -130,19 +130,15 @@ def delete_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
-
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    db.delete(patient)
+    """Deactivate instead of deleting: the clinical history must be preserved."""
+    patient = require_patient(db, current_user, patient_id)
+    patient.activo = False
     db.commit()
 
     return {
-        "mensaje": "Paciente eliminado correctamente"
+        "mensaje": "Paciente desactivado correctamente; su historial se conserva",
+        "id": patient.id,
+        "activo": False,
     }
 
 
