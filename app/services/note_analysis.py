@@ -179,7 +179,7 @@ def analyze_caregiver_note(texto: str) -> NoteAnalysisResult:
         factores.append("Posible desorientación o confusión")
 
     # FIEBRE
-    
+
 
     patrones_fiebre = [
         "tiene fiebre",

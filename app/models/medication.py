@@ -68,4 +68,3 @@ class Medication(Base):
         default=utc_now
     )
 
-    
