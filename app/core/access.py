@@ -35,12 +35,16 @@ def assigned_patient_ids(db, user):
     )
 
 
-def require_record(db, user, model, record_id, *, not_found="Registro no encontrado"):
-    """Load a patient-owned record and verify the caller is assigned to its patient."""
+def require_record(db, user, model, record_id, *, not_found="Registro no encontrado", active=False):
+    """Load a patient-owned record and verify the caller is assigned to its patient.
+
+    ``active=True`` is used by write operations: an inactive patient's history
+    is read-only until the patient is reactivated.
+    """
     record = db.get(model, record_id)
     if record is None:
         raise HTTPException(404, not_found)
-    require_patient(db, user, record.patient_id)
+    require_patient(db, user, record.patient_id, active=active)
     return record
 
 

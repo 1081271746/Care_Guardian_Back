@@ -86,7 +86,7 @@ def update_medication(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    medication = require_record(db, current_user, Medication, medication_id, not_found=NOT_FOUND)
+    medication = require_record(db, current_user, Medication, medication_id, not_found=NOT_FOUND, active=True)
     changes = medication_data.model_dump(exclude_unset=True)
 
     for required in ("nombre", "dosis", "frecuencia", "hora", "fecha_inicio", "activo"):

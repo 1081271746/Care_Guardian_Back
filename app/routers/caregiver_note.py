@@ -99,7 +99,7 @@ def update_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    note = require_record(db, current_user, CaregiverNote, note_id, not_found=NOT_FOUND)
+    note = require_record(db, current_user, CaregiverNote, note_id, not_found=NOT_FOUND, active=True)
 
     if note.caregiver_id != current_user.id:
         # Teammates can read each other's notes but only the author edits them.

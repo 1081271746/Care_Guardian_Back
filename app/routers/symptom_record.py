@@ -102,7 +102,7 @@ def update_symptom_record(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    record = require_record(db, current_user, SymptomRecord, symptom_id, not_found=NOT_FOUND)
+    record = require_record(db, current_user, SymptomRecord, symptom_id, not_found=NOT_FOUND, active=True)
     changes = symptom_data.model_dump(exclude_unset=True)
 
     for required in ("nivel_gravedad", "activo"):

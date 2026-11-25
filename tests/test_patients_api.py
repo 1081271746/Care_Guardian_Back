@@ -73,3 +73,12 @@ def test_other_caregiver_cannot_touch_patient(env):
     assert client.delete(url, headers=other).status_code == 403
     assert client.get(f"{url}/caregivers", headers=other).status_code == 403
     assert client.get("/patients/999999", headers=other).status_code == 403
+
+
+def test_inactive_patient_records_are_read_only(env):
+    client, db, pid, headers, _ = env
+    from app.models.symptom_record import SymptomRecord
+    record = db.query(SymptomRecord).filter_by(patient_id=pid).first()
+    client.delete(f"/patients/{pid}", headers=headers)
+    assert client.get(f"/symptoms/{record.id}", headers=headers).status_code == 200
+    assert client.put(f"/symptoms/{record.id}", headers=headers, json={"nivel_dolor": 3}).status_code == 400

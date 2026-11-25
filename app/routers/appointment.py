@@ -94,7 +94,7 @@ def update_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = require_record(db, current_user, Appointment, appointment_id, not_found=NOT_FOUND)
+    appointment = require_record(db, current_user, Appointment, appointment_id, not_found=NOT_FOUND, active=True)
     changes = appointment_data.model_dump(exclude_unset=True)
 
     for required in ("titulo", "especialidad", "profesional", "fecha", "hora", "estado"):
