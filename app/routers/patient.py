@@ -101,40 +101,22 @@ def update_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    patient = require_patient(db, current_user, patient_id)
+    changes = patient_data.model_dump(exclude_unset=True)
 
-    if patient is None:
+    for required in ("nombres", "apellidos", "fecha_nacimiento", "documento", "activo"):
+        if required in changes and changes[required] is None:
+            raise HTTPException(status_code=422, detail=f"El campo {required} no puede quedar vacío")
+
+    if "documento" in changes and document_taken(db, changes["documento"], exclude_id=patient_id):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un paciente con ese documento"
         )
 
-    if patient_data.nombres is not None:
-        patient.nombres = patient_data.nombres
-
-    if patient_data.apellidos is not None:
-        patient.apellidos = patient_data.apellidos
-
-    if patient_data.fecha_nacimiento is not None:
-        patient.fecha_nacimiento = patient_data.fecha_nacimiento
-
-    if patient_data.documento is not None:
-        patient.documento = patient_data.documento
-
-    if patient_data.telefono is not None:
-        patient.telefono = patient_data.telefono
-
-    if patient_data.direccion is not None:
-        patient.direccion = patient_data.direccion
-
-    if patient_data.contacto_emergencia is not None:
-        patient.contacto_emergencia = patient_data.contacto_emergencia
-
-    if patient_data.telefono_emergencia is not None:
-        patient.telefono_emergencia = patient_data.telefono_emergencia
-
-    if patient_data.activo is not None:
-        patient.activo = patient_data.activo
+    # exclude_unset lets optional contact fields be cleared with null.
+    for field, value in changes.items():
+        setattr(patient, field, value)
 
     db.commit()
     db.refresh(patient)
