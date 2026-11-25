@@ -89,3 +89,45 @@ scripts/       carga de demostración por HTTP (seed_demo.py)
 tests/         pruebas automatizadas
 docs/          notas de entrega y carga
 ```
+
+## Instalación y ejecución local
+
+Requisitos: Python 3.13 y PostgreSQL 14 o superior.
+
+```sh
+python -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cp .env.example .env                 # completa los valores (ver tabla siguiente)
+createdb careguardian                # o crea la base desde pgAdmin
+alembic upgrade head                 # crea/actualiza tablas sin borrar datos
+uvicorn app.main:app --reload --port 8000
+```
+
+- Documentación interactiva: <http://localhost:8000/docs>
+- Salud: <http://localhost:8000/health> → `{"status":"ok","database":"ok"}`
+
+Para generar un `SECRET_KEY` seguro:
+
+```sh
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+## Variables de entorno
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `DATABASE_URL` | Sí | `postgresql+psycopg://USER:PASSWORD@HOST:5432/DB`. Se aceptan `postgres://` y `postgresql://` (Railway). Alternativa heredada: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. |
+| `SECRET_KEY` | Sí | Mínimo 32 caracteres. La API no arranca sin ella. Cambiarla cierra todas las sesiones. |
+| `CORS_ORIGINS` | Sí en producción | Orígenes permitidos separados por comas, p. ej. `https://careguardian-front.up.railway.app`. Con el proxy `/api` del frontend el navegador no llama a la API directamente, pero se mantiene por seguridad. |
+| `GROQ_API_KEY` | Para IA | Clave de Groq. Sin ella, Evolución muestra “servicio no disponible” y nunca simula resultados. |
+| `GROQ_MODEL` | Para IA | `openai/gpt-oss-20b` (soporta salida estructurada estricta). |
+| `GROQ_TIMEOUT_SECONDS` | No | 1–120, por defecto `30`. |
+| `GROQ_REQUESTS_PER_MINUTE` | No | Límite de análisis por cuidador y minuto, por defecto `10`. |
+| `APP_TIMEZONE` | No | Zona IANA del calendario de los cuidadores, por defecto `America/Bogota`. Define “hoy”, las citas próximas y los límites de los períodos. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Duración del JWT (5–1440), por defecto `60`. |
+| `ALLOW_PUBLIC_REGISTRATION` | No | `true` por defecto. `false` desactiva `POST /users/`. |
+| `LOG_LEVEL` | No | `INFO` por defecto. |
+| `PORT` | Railway | Lo define Railway; localmente `8000`. |
+
+Nunca subas `.env` al repositorio (está en `.gitignore`).
