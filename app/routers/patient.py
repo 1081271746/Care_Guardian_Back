@@ -90,15 +90,8 @@ def get_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
-
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    return patient
+    # Explicit check in addition to the router-level scope dependency.
+    return require_patient(db, current_user, patient_id)
 
 
 @router.put("/{patient_id}", response_model=PatientResponse)
