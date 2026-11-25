@@ -1,5 +1,8 @@
 name: Backend verification
 on: [push, pull_request]
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -16,6 +19,8 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgresql+psycopg://runner@127.0.0.1:5432/careguardian_test
+      # Groq is always mocked in tests; never configure a real key in CI.
+      GROQ_API_KEY: ""
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,4 +28,13 @@ jobs:
           python-version: '3.13'
           cache: pip
       - run: pip install -r requirements-dev.txt
-      - run: python -m pytest tests -q --tb=short
+      - name: Compile all modules
+        run: python -m compileall -q app scripts migrations
+      - name: Migrations on an empty PostgreSQL (twice, must be idempotent)
+        env:
+          DATABASE_URL: postgresql+psycopg://runner@127.0.0.1:5432/careguardian_test
+        run: |
+          alembic upgrade head
+          alembic upgrade head
+          psql postgresql://runner@127.0.0.1:5432/careguardian_test -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+      - run: python -m pytest -q --tb=short
