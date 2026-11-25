@@ -127,6 +127,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `APP_TIMEZONE` | No | Zona IANA del calendario de los cuidadores, por defecto `America/Bogota`. Define “hoy”, las citas próximas y los límites de los períodos. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Duración del JWT (5–1440), por defecto `60`. |
 | `ALLOW_PUBLIC_REGISTRATION` | No | `true` por defecto. `false` desactiva `POST /users/`. |
+| `LOGIN_MAX_FAILURES` / `LOGIN_WINDOW_SECONDS` | No | Intentos fallidos por correo antes de responder `429` (por defecto 8 en 900 s; por dirección, 5 veces más). |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_RECYCLE_SECONDS` | No | Pool de conexiones a PostgreSQL (5 / 5 / 1800). |
 | `LOG_LEVEL` | No | `INFO` por defecto. |
 | `PORT` | Railway | Lo define Railway; localmente `8000`. |
 
@@ -313,7 +315,10 @@ Pasos:
    persistente** (no lo elimines ni lo recrees).
 2. En el servicio del backend, variables:
    - `DATABASE_URL` = referencia `${{Postgres.DATABASE_URL}}`
-   - `SECRET_KEY` = valor aleatorio de 48+ caracteres (no reutilices uno publicado)
+   - `SECRET_KEY` = valor aleatorio de 48+ caracteres. La API **se niega a
+     arrancar** con el valor que quedó publicado en el historial del repositorio
+     (`careguardian_super_secret_key_2026`); si Railway lo usa, cámbialo antes de
+     desplegar (las sesiones abiertas se cerrarán, es lo esperado).
    - `CORS_ORIGINS` = URL pública del frontend
    - `GROQ_API_KEY`, `GROQ_MODEL=openai/gpt-oss-20b`
    - opcionales: `GROQ_TIMEOUT_SECONDS`, `GROQ_REQUESTS_PER_MINUTE`, `APP_TIMEZONE`
@@ -371,6 +376,8 @@ Más detalle en [`docs/CARGA_DEMO.md`](docs/CARGA_DEMO.md).
 ## Seguridad
 
 - Contraseñas con Argon2; mismo coste de verificación para correos inexistentes.
+- Límite de intentos fallidos de inicio de sesión (`429` + `Retry-After`).
+- Cambiar la contraseña invalida todos los tokens emitidos antes.
 - JWT HS256 con `exp`, `iat` y `sub` obligatorios.
 - Permisos por paciente en todas las rutas (dependencia global + comprobación explícita).
 - Errores de base de datos traducidos a `409`/`503` sin SQL ni datos.
