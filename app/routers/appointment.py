@@ -101,6 +101,14 @@ def update_appointment(
         if required in changes and changes[required] is None:
             raise HTTPException(status_code=422, detail=f"El campo {required} no puede quedar vacío")
 
+    new_date = changes.get("fecha", appointment.fecha)
+    new_status = changes.get("estado", appointment.estado)
+    if ("fecha" in changes or "estado" in changes) and new_status == "pendiente" and new_date < local_today():
+        raise HTTPException(
+            status_code=422,
+            detail="Una cita pendiente no puede quedar en una fecha pasada; márcala como completada o cancelada",
+        )
+
     for field, value in changes.items():
         setattr(appointment, field, value)
 

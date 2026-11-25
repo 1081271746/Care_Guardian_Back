@@ -116,3 +116,13 @@ def test_alert_lifecycle_and_duplicates(env):
     assert client.get(base + "?nivel=alto", headers=headers).json()[0]["id"] == aid
     assert client.delete(f"/alerts/{aid}", headers=headers).status_code == 200
     assert client.get(f"/alerts/{aid}", headers=headers).json()["estado"] == "descartada"
+
+
+def test_rescheduling_a_pending_visit_into_the_past_is_rejected(env):
+    client, _, pid, headers, _ = env
+    created = client.post(f"/appointments/patients/{pid}", headers=headers, json=visit()).json()
+    url = f"/appointments/{created['id']}"
+    yesterday = (TODAY - timedelta(days=1)).isoformat()
+    assert client.put(url, headers=headers, json={"fecha": yesterday}).status_code == 422
+    done = client.put(url, headers=headers, json={"fecha": yesterday, "estado": "completada"})
+    assert done.status_code == 200 and done.json()["estado"] == "completada"
