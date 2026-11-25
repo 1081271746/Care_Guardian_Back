@@ -195,3 +195,16 @@ def test_legacy_objects_reject_other_caregivers(env, kind):
     assert client.get(url, headers=other).status_code == 403
     assert client.put(url, headers=other, json={}).status_code == 403
     assert client.delete(url, headers=other).status_code == 403
+
+
+def test_category_facts_never_leak_free_text(env):
+    client, db, pid, headers, _ = env
+    db.add(SymptomRecord(patient_id=pid, caregiver_id=1, apetito="María no quiso comer",
+                         estado_animo="Triste", nivel_gravedad="moderado",
+                         fecha_registro=datetime(2026, 11, 5, 12, tzinfo=timezone.utc)))
+    db.commit()
+    data = client.get(f"/evolution/patients/{pid}", headers=headers).json()
+    assert data["categorias"]["apetito"] == {"otro": 1}
+    assert data["categorias"]["estado_animo"] == {"triste": 1}
+    assert "María" not in json.dumps(data["hechos"], ensure_ascii=False)
+    assert "categorias_nivel_gravedad" in data["hechos"]

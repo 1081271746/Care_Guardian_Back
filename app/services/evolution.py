@@ -10,6 +10,32 @@ from app.models.alert import Alert
 
 MAX_RECORDS = 2000
 
+# Only these normalized categories are summarized; any other free text is
+# reported as "otro" so personal details typed by caregivers never leave.
+KNOWN_CATEGORIES = {
+    "apetito": {"normal", "bueno", "bajo", "muy bajo", "aumentado", "regular"},
+    "estado_animo": {"tranquilo", "estable", "alegre", "triste", "ansioso", "ansiosa",
+                     "decaído", "decaida", "irritable", "confundido", "regular"},
+    "nivel_gravedad": {"bajo", "moderado", "grave"},
+}
+
+
+def category_counts(records, field):
+    counts = {}
+    for record in records:
+        value = getattr(record, field)
+        if value is None:
+            continue
+        value = value.strip().lower()
+        key = value if value in KNOWN_CATEGORIES[field] else "otro"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def describe_counts(label, counts):
+    parts = ", ".join(f"{name} {total}" for name, total in counts.items())
+    return f"{label}: {parts}."
+
 
 def utc(value):
     return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None
@@ -96,6 +122,23 @@ def evolution(db, patient_id, period, zone=None):
                    f"cambio {round(values[-1] - values[0], 2):+}{unit}."
                    if len(values) > 1 else " No hay suficientes mediciones para comparar.")
             )
+    categories = {}
+    for field, label in (("nivel_gravedad", "Gravedad registrada"), ("apetito", "Apetito registrado"),
+                         ("estado_animo", "Estado de ánimo registrado")):
+        counts = category_counts(symptoms, field)
+        categories[field] = counts
+        if counts:
+            facts[f"categorias_{field}"] = describe_counts(label, counts)
+    alert_levels = {}
+    for alert in rows["alerta"]:
+        alert_levels[alert.nivel] = alert_levels.get(alert.nivel, 0) + 1
+    if alert_levels:
+        facts["alertas_por_nivel"] = describe_counts("Alertas activas por nivel", dict(sorted(alert_levels.items())))
+    visit_states = {}
+    for visit in rows["cita"]:
+        visit_states[visit.estado] = visit_states.get(visit.estado, 0) + 1
+    if visit_states:
+        facts["citas_por_estado"] = describe_counts("Citas por estado", dict(sorted(visit_states.items())))
     # No free text (names, notes, observations, medication names, identifiers) goes to Groq.
     for kind, label in (("sintoma", "síntomas"), ("nota", "notas del cuidador"),
                         ("medicamento", "inicios de medicamentos"), ("cita", "citas"),
@@ -105,7 +148,7 @@ def evolution(db, patient_id, period, zone=None):
         "patient_id": patient_id, "periodo": period.model_dump(mode="json", include={"desde", "hasta"}),
         "zona_horaria": str(zone),
         "totales": {kind: len(records) for kind, records in rows.items()},
-        "metricas": metrics, "hechos": facts,
+        "metricas": metrics, "categorias": categories, "hechos": facts,
         "historial": sorted(events, key=lambda event: (event["fecha"], event["id"]), reverse=True),
         "datos_suficientes": any(m["cantidad"] >= 2 for m in metrics.values()),
         "nota": "Las diferencias comparan primera y última medición, no prueban una tendencia clínica. "
