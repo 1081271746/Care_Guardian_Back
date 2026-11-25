@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.access import enforce_patient_scope
+from app.core.time import app_timezone
 
 from app.routers.patient import router as patient_router
 from app.routers.evolution import router as evolution_router
@@ -25,6 +26,12 @@ from app.routers.auth import router as auth_router
 import app.models  # noqa: F401  (registers every table in Base.metadata)
 
 from app.database.connection import engine
+
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 @asynccontextmanager
@@ -46,6 +53,11 @@ async def lifespan(app):
             "Revisa GROQ_TIMEOUT_SECONDS (1–120) "
             "y GROQ_REQUESTS_PER_MINUTE (entero positivo)"
         )
+
+    try:
+        app_timezone()
+    except ValueError as error:
+        raise RuntimeError(f"Revisa APP_TIMEZONE: {error}")
 
     yield
     engine.dispose()
