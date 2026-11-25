@@ -1,7 +1,7 @@
 from datetime import date, datetime
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, StringConstraints, computed_field
-from typing import Annotated
 
 from app.schemas.common import BirthDate, OptionalText, Phone, Text
 

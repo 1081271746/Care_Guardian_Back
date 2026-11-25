@@ -10,7 +10,6 @@ from app.database.connection import get_db
 from app.models.user import User
 from app.schemas.user import PasswordChange, UserCreate, UserResponse, UserUpdate
 
-
 router = APIRouter(
     prefix="/users",
     tags=["Users"]

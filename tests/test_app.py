@@ -25,6 +25,7 @@ def test_cors_preflight_allows_configured_origin_only(env):
 
 def test_database_errors_are_translated_without_sql(env):
     from sqlalchemy.exc import IntegrityError, OperationalError
+
     from app.main import app
     client, *_ = env
 
@@ -55,7 +56,9 @@ def test_openapi_lists_new_endpoints(env):
 
 def test_published_secret_key_is_refused(monkeypatch):
     import asyncio
+
     import pytest
+
     from app.main import app, lifespan
     monkeypatch.setenv("SECRET_KEY", "careguardian_super_secret_key_2026")
 
@@ -77,6 +80,7 @@ def test_request_id_is_generated_or_propagated(env):
 
 def test_unexpected_errors_return_generic_json_with_request_id(env):
     from fastapi.testclient import TestClient
+
     from app.main import app
 
     def boom():

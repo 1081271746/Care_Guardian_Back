@@ -20,7 +20,6 @@ from app.schemas.symptom_record import SymptomRecordResponse
 from app.services.dashboard_summary import build_summary
 from app.services.historical_analysis import analyze_patient_history
 
-
 router = APIRouter(
     prefix="/dashboard",
     tags=["Dashboard"]

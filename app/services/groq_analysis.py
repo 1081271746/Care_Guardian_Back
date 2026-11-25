@@ -2,10 +2,12 @@ import copy
 import json
 import logging
 import os
+
 import httpx
 from fastapi import HTTPException
 from pydantic import ValidationError
-from app.schemas.evolution import AISelection, DISCLAIMER
+
+from app.schemas.evolution import DISCLAIMER, AISelection
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 logger = logging.getLogger("careguardian.groq")

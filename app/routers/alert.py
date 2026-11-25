@@ -10,13 +10,7 @@ from app.core.time import utc_now
 from app.database.connection import get_db
 from app.models.alert import Alert
 from app.models.user import User
-from app.schemas.alert import (
-    CLOSED_STATUSES,
-    AlertCreate,
-    AlertUpdate,
-    AlertResponse
-)
-
+from app.schemas.alert import CLOSED_STATUSES, AlertCreate, AlertResponse, AlertUpdate
 
 router = APIRouter(
     prefix="/alerts",

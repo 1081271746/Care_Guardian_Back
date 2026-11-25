@@ -9,7 +9,6 @@ from app.models.user import User
 from app.services.alert_generator import generate_alert_from_history
 from app.services.historical_analysis import analyze_patient_history
 
-
 router = APIRouter(
     prefix="/analysis",
     tags=["Analysis"]

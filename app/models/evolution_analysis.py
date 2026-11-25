@@ -1,7 +1,8 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, JSON, String
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.core.time import utc_now
 from app.database.base import Base
 

@@ -3,9 +3,9 @@ import argparse
 import json
 import os
 import sys
+
 from .seed_http import SeedClient, SeedError, validate_url
-from .seed_payloads import (DEFAULT_COUNTS, IDENTITY_FIELDS, patient_payload,
-                            resource_payload, validate_namespace)
+from .seed_payloads import DEFAULT_COUNTS, IDENTITY_FIELDS, patient_payload, resource_payload, validate_namespace
 from .seed_runner import run_seed, validate_counts
 
 

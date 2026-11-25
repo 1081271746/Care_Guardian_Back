@@ -7,13 +7,8 @@ from app.core.time import utc_now
 from app.database.connection import get_db
 from app.models.symptom_record import SymptomRecord
 from app.models.user import User
-from app.schemas.symptom_record import (
-    SymptomRecordCreate,
-    SymptomRecordUpdate,
-    SymptomRecordResponse
-)
+from app.schemas.symptom_record import SymptomRecordCreate, SymptomRecordResponse, SymptomRecordUpdate
 from app.services.alert_generator import generate_alert_from_symptom
-
 
 router = APIRouter(
     prefix="/symptoms",

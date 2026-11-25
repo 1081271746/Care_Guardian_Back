@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 NEGATION_WORDS = {"no", "sin", "nunca", "tampoco", "ni"}
 LINKING_VERBS = {"está", "esta", "estuvo", "tiene", "tuvo", "presenta", "presentó", "presento",
                  "se", "ha", "hay", "parece", "siente", "sintió", "sintio"}

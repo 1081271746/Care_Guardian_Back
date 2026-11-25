@@ -1,5 +1,6 @@
 """HTTP-only seed client. Exceptions never expose credentials or response bodies."""
 from urllib.parse import urlsplit
+
 import httpx
 
 

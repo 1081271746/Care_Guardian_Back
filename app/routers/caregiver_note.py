@@ -7,14 +7,9 @@ from app.core.time import utc_now
 from app.database.connection import get_db
 from app.models.caregiver_note import CaregiverNote
 from app.models.user import User
-from app.schemas.caregiver_note import (
-    CaregiverNoteCreate,
-    CaregiverNoteUpdate,
-    CaregiverNoteResponse
-)
+from app.schemas.caregiver_note import CaregiverNoteCreate, CaregiverNoteResponse, CaregiverNoteUpdate
 from app.services.alert_generator import generate_alert_from_note
 from app.services.note_analysis import analyze_caregiver_note
-
 
 router = APIRouter(
     prefix="/notes",

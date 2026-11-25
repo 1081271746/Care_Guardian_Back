@@ -16,7 +16,6 @@ from app.models.patient_caregiver import PatientCaregiver
 from app.models.user import User
 from app.schemas.user import CurrentUserResponse, UserLogin
 
-
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]

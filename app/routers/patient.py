@@ -3,19 +3,13 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.access import assigned_patient_ids, require_patient
-
-from app.models.patient_caregiver import PatientCaregiver
-from app.schemas.caregiver import CaregiverAssignmentCreate, CaregiverResponse
+from app.core.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.patient import Patient
-from app.schemas.patient import (
-    PatientCreate,
-    PatientUpdate,
-    PatientResponse
-)
-from app.core.dependencies import get_current_user
+from app.models.patient_caregiver import PatientCaregiver
 from app.models.user import User
-
+from app.schemas.caregiver import CaregiverAssignmentCreate, CaregiverResponse
+from app.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
 
 router = APIRouter(
     prefix="/patients",

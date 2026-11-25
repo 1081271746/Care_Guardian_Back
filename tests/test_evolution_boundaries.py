@@ -35,6 +35,7 @@ def test_too_many_records_ask_for_a_shorter_period(env, monkeypatch):
 def test_metric_points_are_chronological_and_only_real(env):
     client, db, pid, headers, _ = env
     from datetime import datetime, timezone
+
     from app.models.symptom_record import SymptomRecord
     # A record without pain must not create a pain point (no interpolation).
     db.add(SymptomRecord(patient_id=pid, caregiver_id=1, temperatura=37.0,

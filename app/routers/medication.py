@@ -6,12 +6,7 @@ from app.core.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.medication import Medication
 from app.models.user import User
-from app.schemas.medication import (
-    MedicationCreate,
-    MedicationUpdate,
-    MedicationResponse
-)
-
+from app.schemas.medication import MedicationCreate, MedicationResponse, MedicationUpdate
 
 router = APIRouter(
     prefix="/medications",

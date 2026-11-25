@@ -34,6 +34,7 @@ def test_period_days_follow_caregiver_timezone(env, monkeypatch):
 
 def test_appointment_hour_is_local_wall_clock(env, monkeypatch):
     from datetime import date, time
+
     from app.models.appointment import Appointment
     client, db, pid, headers, _ = env
     monkeypatch.setenv("APP_TIMEZONE", "America/Bogota")

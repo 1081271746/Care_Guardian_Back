@@ -3,31 +3,27 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+import app.models  # noqa: F401  (registers every table in Base.metadata)
 from app.core.access import enforce_patient_scope
 from app.core.time import app_timezone
-
-from app.routers.patient import router as patient_router
-from app.routers.evolution import router as evolution_router
-from app.routers.medication import router as medication_router
-from app.routers.appointment import router as appointment_router
-from app.routers.symptom_record import router as symptom_router
-from app.routers.caregiver_note import router as caregiver_note_router
+from app.database.connection import engine
 from app.routers.alert import router as alert_router
 from app.routers.analysis import router as analysis_router
-from app.routers.dashboard import router as dashboard_router
-from app.routers.user import router as user_router
+from app.routers.appointment import router as appointment_router
 from app.routers.auth import router as auth_router
-
-import app.models  # noqa: F401  (registers every table in Base.metadata)
-
-from app.database.connection import engine
-
+from app.routers.caregiver_note import router as caregiver_note_router
+from app.routers.dashboard import router as dashboard_router
+from app.routers.evolution import router as evolution_router
+from app.routers.medication import router as medication_router
+from app.routers.patient import router as patient_router
+from app.routers.symptom_record import router as symptom_router
+from app.routers.user import router as user_router
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),

@@ -4,18 +4,20 @@ import subprocess
 import sys
 from datetime import date, datetime, time, timezone
 from unittest.mock import patch
+
 import httpx
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
+
 from app.database.base import Base
-from app.models.patient import Patient
+from app.models.alert import Alert
+from app.models.appointment import Appointment
+from app.models.caregiver_note import CaregiverNote
 from app.models.evolution_analysis import EvolutionAnalysis
 from app.models.medication import Medication
-from app.models.appointment import Appointment
+from app.models.patient import Patient
 from app.models.symptom_record import SymptomRecord
-from app.models.caregiver_note import CaregiverNote
-from app.models.alert import Alert
 from app.services.groq_analysis import GROQ_URL
 
 BODY = {"consentimiento": True, "version_consentimiento": "groq-minimized-v1"}

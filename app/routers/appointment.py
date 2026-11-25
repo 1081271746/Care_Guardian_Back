@@ -7,12 +7,7 @@ from app.core.time import local_today
 from app.database.connection import get_db
 from app.models.appointment import Appointment
 from app.models.user import User
-from app.schemas.appointment import (
-    AppointmentCreate,
-    AppointmentUpdate,
-    AppointmentResponse
-)
-
+from app.schemas.appointment import AppointmentCreate, AppointmentResponse, AppointmentUpdate
 
 router = APIRouter(
     prefix="/appointments",

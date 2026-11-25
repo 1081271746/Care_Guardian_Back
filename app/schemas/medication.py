@@ -3,7 +3,6 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.core.time import local_today
-
 from app.schemas.common import HOUR_PATTERN, OptionalText, Text
 
 

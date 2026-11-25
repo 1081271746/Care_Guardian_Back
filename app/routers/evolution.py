@@ -1,14 +1,16 @@
 import os
 from datetime import date, datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
 from app.core.access import require_patient
 from app.core.dependencies import get_current_user
 from app.core.time import app_timezone
 from app.database.connection import get_db
 from app.models.evolution_analysis import EvolutionAnalysis
 from app.models.user import User
-from app.schemas.evolution import Period, AnalysisRequest, CONSENT_VERSION
+from app.schemas.evolution import CONSENT_VERSION, AnalysisRequest, Period
 from app.services.evolution import evolution
 from app.services.groq_analysis import generate_analysis
 

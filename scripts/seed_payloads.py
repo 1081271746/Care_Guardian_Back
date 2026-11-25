@@ -4,8 +4,8 @@ Every record carries a ``CG-DEMO-<namespace>-<resource>-<index>`` marker in an
 identity field so reruns reconcile instead of duplicating. Names and titles are
 readable but always labelled "(demo)": none of this is clinical information.
 """
-from datetime import date, datetime, time, timedelta, timezone
 import re
+from datetime import date, datetime, time, timedelta, timezone
 from hashlib import sha256
 
 DEFAULT_COUNTS = {
