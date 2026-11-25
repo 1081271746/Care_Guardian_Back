@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from app.services.text import normalize
+
 
 @dataclass
 class HistoricalAnalysisResult:
@@ -125,7 +127,7 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     # -------------------------------------------------
 
     apetitos = [
-        s.apetito.lower()
+        normalize(s.apetito)
         for s in registros
         if s.apetito is not None
     ]
@@ -150,7 +152,7 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     # -------------------------------------------------
 
     estados = [
-        s.estado_animo.lower()
+        normalize(s.estado_animo)
         for s in registros
         if s.estado_animo is not None
     ]
@@ -158,7 +160,7 @@ def analyze_patient_history(symptoms) -> HistoricalAnalysisResult:
     if estados:
         estado_actual = estados[-1]
 
-        if estado_actual in ["decaído", "decaida"]:
+        if estado_actual in ["decaido", "decaida"]:
             score += 2
             tendencias.append(
                 "Se registra un estado de ánimo decaído."

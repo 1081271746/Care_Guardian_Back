@@ -75,3 +75,10 @@ def test_negated_mentions_do_not_raise_note_alerts(text):
 def test_negative_patterns_still_match():
     factores = analyze_caregiver_note("No quiso comer y no pudo dormir.").factores
     assert factores == ["Alteración del sueño", "Disminución del apetito"]
+
+
+@pytest.mark.parametrize("mood", ["Decaído", "decaido", "DECAÍDA ", "decaida"])
+def test_mood_spelling_variants_are_equivalent(mood):
+    assert "Estado de ánimo decaído" in analyze_symptoms(symptom(estado_animo=mood)).factores
+    history = analyze_patient_history([symptom(estado_animo=mood)])
+    assert "Se registra un estado de ánimo decaído." in history.tendencias
