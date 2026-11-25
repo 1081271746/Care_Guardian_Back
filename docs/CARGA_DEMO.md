@@ -11,10 +11,11 @@ Desde la raíz del backend, con sus dependencias instaladas:
 python -m scripts.seed_demo
 ```
 
-Predeterminados: 10 pacientes y sus asignaciones automáticas al creador,
-20 medicamentos, 20 citas, 30 síntomas, 20 notas y 30 alertas manuales.
-Los registros se distribuyen entre los pacientes. Son datos ficticios,
-claramente identificados; los medicamentos no son prescripciones.
+Predeterminados: 6 pacientes y sus asignaciones automáticas al creador,
+18 medicamentos, 12 citas, 84 síntomas (14 por paciente), 24 notas y 6 alertas
+manuales. Los registros se distribuyen entre los pacientes. Son datos ficticios,
+etiquetados “(demo)” y con un marcador `CG-DEMO-…`; los medicamentos no son
+prescripciones.
 
 ## Aplicar una carga
 
@@ -27,10 +28,14 @@ La cuenta debe existir, estar activa y tener los permisos correspondientes.
 python -m scripts.seed_demo --apply --confirm-production
 ```
 
+Si la cuenta todavía no existe, agrega `--create-account` (y opcionalmente
+`--account-name "Nombre visible"`): se registra con `POST /users/` solo cuando
+el inicio de sesión responde 401. Nunca se cambia la contraseña de una cuenta existente.
+
 `--confirm-production` autoriza escrituras fuera de localhost; revisa el
 destino antes de usarlo. El comando predeterminado no escribe nada.
-Para cambiar cantidades: `--patients 10 --medications 20 --appointments 20
---symptoms 30 --notes 20 --alerts 30`. Todas aceptan 0–1000. Una carga de
+Para cambiar cantidades: `--patients 6 --medications 18 --appointments 12
+--symptoms 84 --notes 24 --alerts 6`. Todas aceptan 0–1000. Una carga de
 registros relacionados requiere pacientes.
 
 Mantén `--namespace carlos-demo-v1` entre ejecuciones para reconciliar los
@@ -61,9 +66,10 @@ Los mensajes de error excluyen cuerpos de respuesta y credenciales.
 
 La API puede generar alertas adicionales al crear síntomas o notas:
 el conteo configurado de alertas corresponde solo a las manuales marcadas.
-No se inventa una fecha histórica para síntomas o notas: sus endpoints
-actuales asignan la fecha de registro en el servidor. Citas y medicamentos
-sí admiten fechas programadas/de inicio.
+Síntomas y notas usan el campo opcional `fecha_registro` de la API para
+repartirse en las últimas cuatro semanas (nunca en el futuro); así las gráficas
+de Evolución tienen mediciones reales almacenadas. Citas y medicamentos usan
+sus fechas programadas/de inicio.
 
 ## Verificación y límites
 
@@ -79,6 +85,6 @@ el cargador utiliza exclusivamente HTTP y no abre bases locales ni remotas.
 Una relectura HTTP confirma que los registros son recuperables desde la API.
 No demuestra por sí sola que el despliegue use PostgreSQL de Railway:
 eso debe verificarse en la configuración y logs del despliegue autorizado,
-sin mostrar `DATABASE_URL`. Esta entrega no ejecutó carga en producción,
-no comprobó persistencia en Railway y no cambió despliegues ni migraciones.
-La rama debe revisarse e integrarse antes de desplegar.
+sin mostrar `DATABASE_URL`. La carga se probó contra un backend local con
+PostgreSQL (creación, reejecución sin duplicados y lectura tras reiniciar el
+proceso); no se ejecutó contra producción.
