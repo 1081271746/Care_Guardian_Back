@@ -191,7 +191,8 @@ def test_legacy_objects_reject_other_caregivers(env, kind):
         record = Alert(patient_id=pid, tipo="manual", nivel="bajo", titulo="Prueba", mensaje="Solo para pruebas")
     else:
         record = db.query(SymptomRecord).first()
-    db.add(record); db.commit()
+    db.add(record)
+    db.commit()
     url = f"/{kind}/{record.id}"
     assert client.get(url, headers=headers).status_code == 200
     assert client.get(url, headers=other).status_code == 403

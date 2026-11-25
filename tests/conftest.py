@@ -45,9 +45,11 @@ def env(monkeypatch):
     with Session(engine) as db:
         a = User(nombre="Cuidador prueba", email="test-a@example.org", password_hash=hash_password(secrets.token_urlsafe()))
         b = User(nombre="Otro cuidador", email="test-b@example.org", password_hash=hash_password(secrets.token_urlsafe()))
-        db.add_all([a, b]); db.flush()
+        db.add_all([a, b])
+        db.flush()
         p = Patient(nombres="Paciente prueba", apellidos="Prueba", fecha_nacimiento=date(1950, 1, 1), documento="TEST-ONLY")
-        db.add(p); db.flush()
+        db.add(p)
+        db.flush()
         db.add(PatientCaregiver(patient_id=p.id, user_id=a.id))
         for day, pain in [(1, 0), (3, 6)]:
             db.add(SymptomRecord(
