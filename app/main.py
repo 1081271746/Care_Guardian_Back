@@ -36,11 +36,19 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+# Values that were published in this repository's history or in examples.
+PUBLIC_SECRET_KEYS = {"careguardian_super_secret_key_2026", "changeme", "secret"}
+
+
 @asynccontextmanager
 async def lifespan(app):
     if not os.getenv("SECRET_KEY") or len(os.environ["SECRET_KEY"]) < 32:
         raise RuntimeError(
             "Configura SECRET_KEY con al menos 32 caracteres"
+        )
+    if os.environ["SECRET_KEY"] in PUBLIC_SECRET_KEYS:
+        raise RuntimeError(
+            "SECRET_KEY usa un valor publicado; genera uno nuevo con secrets.token_urlsafe(48)"
         )
 
     try:

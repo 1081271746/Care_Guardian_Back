@@ -49,3 +49,17 @@ def test_openapi_lists_new_endpoints(env):
     for path in ("/auth/me", "/dashboard/summary", "/evolution/ai-status",
                  "/evolution/patients/{patient_id}/analyses/{analysis_id}"):
         assert path in paths
+
+
+def test_published_secret_key_is_refused(monkeypatch):
+    import asyncio
+    import pytest
+    from app.main import app, lifespan
+    monkeypatch.setenv("SECRET_KEY", "careguardian_super_secret_key_2026")
+
+    async def start():
+        async with lifespan(app):
+            pass
+
+    with pytest.raises(RuntimeError, match="publicado"):
+        asyncio.run(start())
