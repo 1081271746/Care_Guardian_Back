@@ -259,7 +259,13 @@ Errores (nunca se reenvía el cuerpo de Groq ni la clave):
 | Tiempo agotado | `504` |
 | Respuesta inválida o error del proveedor | `502` |
 
-Comprobar la configuración sin exponer secretos: `GET /evolution/ai-status`.
+Comprobar la configuración sin exponer secretos:
+
+- `GET /evolution/ai-status` (con sesión): indica si hay clave y modelo.
+- `python -m scripts.check_groq` (local o `railway run python -m scripts.check_groq`):
+  envía dos hechos **sintéticos** por el mismo código de producción y confirma
+  que Groq responde y que la respuesta pasa la validación. No usa datos de pacientes
+  ni imprime la clave.
 
 ## Módulo de evolución
 
