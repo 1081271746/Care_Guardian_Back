@@ -231,3 +231,20 @@ def test_ai_status_reports_configuration_without_secrets(env, monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY")
     assert client.get("/evolution/ai-status", headers=headers).json()["configurado"] is False
     assert client.get("/evolution/ai-status").status_code == 401
+
+
+def test_saved_analysis_keeps_period_and_can_be_reopened(env):
+    client, db, pid, headers, other = env
+    url = f"/evolution/patients/{pid}/analyses"
+    body = {**BODY, "desde": "2026-11-01", "hasta": "2026-11-30"}
+    with patch("app.services.groq_analysis.GroqHTTPClient.post",
+               return_value=response('{"resumen":["nivel_dolor"],"revisar":["temperatura"]}')):
+        created = client.post(url, json=body, headers=headers).json()
+    assert created["periodo"] == {"desde": "2026-11-01", "hasta": "2026-11-30"}
+    row = db.query(EvolutionAnalysis).one()
+    assert (str(row.period_start), str(row.period_end)) == ("2026-11-01", "2026-11-30")
+    detail = client.get(f"{url}/{created['id']}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["resultado"]["revisar"][0].startswith("Temperatura")
+    assert client.get(f"{url}/{created['id']}", headers=other).status_code == 403
+    assert client.get(f"{url}/999999", headers=headers).status_code == 404

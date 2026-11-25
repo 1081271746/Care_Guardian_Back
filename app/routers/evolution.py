@@ -39,15 +39,36 @@ def get_evolution(patient_id: int, period: Period = Depends(period_query),
     return evolution(db, patient_id, period)
 
 
+def serialize_analysis(record):
+    return {
+        "id": record.id, "fecha": record.created_at, "modelo": record.model,
+        "periodo": {"desde": record.period_start, "hasta": record.period_end},
+        "autor_id": record.user_id, "resultado": record.result,
+    }
+
+
 @router.get("/patients/{patient_id}/analyses")
 def list_analyses(patient_id: int, limit: int = Query(20, ge=1, le=100),
+                  offset: int = Query(0, ge=0),
                   db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id)
     records = db.query(EvolutionAnalysis).filter_by(
         patient_id=patient_id, status="completed"
-    ).order_by(EvolutionAnalysis.created_at.desc(), EvolutionAnalysis.id.desc()).limit(limit).all()
-    return [{"id": r.id, "fecha": r.created_at, "modelo": r.model, "resultado": r.result}
-            for r in records]
+    ).order_by(EvolutionAnalysis.created_at.desc(), EvolutionAnalysis.id.desc()
+    ).offset(offset).limit(limit).all()
+    return [serialize_analysis(r) for r in records]
+
+
+@router.get("/patients/{patient_id}/analyses/{analysis_id}")
+def get_analysis(patient_id: int, analysis_id: int,
+                 db: Session = Depends(get_db), user=Depends(get_current_user)):
+    require_patient(db, user, patient_id)
+    record = db.query(EvolutionAnalysis).filter_by(
+        id=analysis_id, patient_id=patient_id, status="completed"
+    ).first()
+    if record is None:
+        raise HTTPException(404, "Análisis no encontrado")
+    return serialize_analysis(record)
 
 
 @router.post("/patients/{patient_id}/analyses", status_code=201)
@@ -73,21 +94,25 @@ def create_analysis(patient_id: int, body: AnalysisRequest,
     attempt = EvolutionAnalysis(
         patient_id=patient_id, user_id=user.id, consent_version=CONSENT_VERSION,
         model=model, status="pending", created_at=now,
+        period_start=body.desde, period_end=body.hasta,
     )
     db.add(attempt)
     db.commit()
     try:
         result = generate_analysis(data)
-    except HTTPException:
+    except HTTPException as error:
         attempt.status = "failed"
+        attempt.error = str(error.detail)[:200]
         db.commit()
         raise
     except Exception:
         # Unexpected failures must not leave the attempt "pending" forever.
         attempt.status = "failed"
+        attempt.error = "Error inesperado"
         db.commit()
         raise HTTPException(502, "No se pudo completar el análisis con Groq")
     attempt.status = "completed"
     attempt.result = result
     db.commit()
-    return {"id": attempt.id, "fecha": attempt.created_at, "modelo": model, "resultado": result}
+    db.refresh(attempt)
+    return serialize_analysis(attempt)
