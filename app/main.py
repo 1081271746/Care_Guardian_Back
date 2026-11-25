@@ -81,16 +81,24 @@ app = FastAPI(
 )
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        origin.strip()
+def cors_origins() -> list[str]:
+    origins = [
+        origin.strip().rstrip("/")
         for origin in os.getenv(
             "CORS_ORIGINS",
             "http://localhost:4200,http://127.0.0.1:4200"
         ).split(",")
         if origin.strip()
-    ],
+    ]
+    if "*" in origins:
+        # Clinical data must never be readable from arbitrary sites.
+        raise RuntimeError("CORS_ORIGINS no admite '*'; indica la URL del frontend")
+    return origins
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins(),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
