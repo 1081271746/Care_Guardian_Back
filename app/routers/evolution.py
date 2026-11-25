@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.access import require_patient
 from app.core.dependencies import get_current_user
+from app.core.time import app_timezone
 from app.database.connection import get_db
 from app.models.evolution_analysis import EvolutionAnalysis
 from app.models.user import User
@@ -12,6 +13,13 @@ from app.services.evolution import evolution
 from app.services.groq_analysis import generate_analysis
 
 router = APIRouter(prefix="/evolution", tags=["Evolution"])
+
+
+def resolve_zone(name: str | None):
+    try:
+        return app_timezone(name)
+    except ValueError:
+        raise HTTPException(422, "Zona horaria no válida")
 
 
 def period_query(desde: date | None = None, hasta: date | None = None):
@@ -34,9 +42,11 @@ def ai_status(user=Depends(get_current_user)):
 
 @router.get("/patients/{patient_id}", summary="Estadísticas, mediciones e historial del período")
 def get_evolution(patient_id: int, period: Period = Depends(period_query),
+                  zona: str | None = Query(None, max_length=64,
+                                           description="Zona IANA del navegador; por defecto APP_TIMEZONE"),
                   db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id)
-    return evolution(db, patient_id, period)
+    return evolution(db, patient_id, period, resolve_zone(zona))
 
 
 def serialize_analysis(record):
@@ -76,7 +86,7 @@ def get_analysis(patient_id: int, analysis_id: int,
 def create_analysis(patient_id: int, body: AnalysisRequest,
                     db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_patient(db, user, patient_id, active=True)
-    data = evolution(db, patient_id, body)
+    data = evolution(db, patient_id, body, resolve_zone(body.zona))
     if not data["datos_suficientes"]:
         raise HTTPException(422, "Se necesitan al menos dos mediciones de un mismo indicador")
     model = os.getenv("GROQ_MODEL", "")

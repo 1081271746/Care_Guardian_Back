@@ -44,3 +44,15 @@ def test_appointment_hour_is_local_wall_clock(env, monkeypatch):
     visit = next(e for e in events if e["tipo"] == "cita")
     # 09:00 in Bogotá (UTC-5) is 14:00 UTC.
     assert visit["fecha"] == "2026-11-20T14:00:00+00:00"
+
+
+def test_browser_timezone_can_override_the_default(env):
+    from app.models.symptom_record import SymptomRecord
+    client, db, pid, headers, _ = env
+    db.add(SymptomRecord(patient_id=pid, caregiver_id=1, nivel_dolor=4,
+                         fecha_registro=datetime(2026, 11, 11, 2, 30, tzinfo=timezone.utc)))
+    db.commit()
+    url = f"/evolution/patients/{pid}?desde=2026-11-11&hasta=2026-11-11"
+    madrid = client.get(url + "&zona=Europe/Madrid", headers=headers).json()
+    assert madrid["totales"]["sintoma"] == 1 and madrid["zona_horaria"] == "Europe/Madrid"
+    assert client.get(url + "&zona=Marte/Olympus", headers=headers).status_code == 422
