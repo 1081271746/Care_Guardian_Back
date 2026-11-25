@@ -28,6 +28,22 @@ def require_patient(db, user, patient_id, *, active=False):
     return patient
 
 
+def assigned_patient_ids(db, user):
+    """Subquery with the ids of every patient assigned to ``user``."""
+    return db.query(PatientCaregiver.patient_id).filter(
+        PatientCaregiver.user_id == user.id
+    )
+
+
+def require_record(db, user, model, record_id, *, not_found="Registro no encontrado"):
+    """Load a patient-owned record and verify the caller is assigned to its patient."""
+    record = db.get(model, record_id)
+    if record is None:
+        raise HTTPException(404, not_found)
+    require_patient(db, user, record.patient_id)
+    return record
+
+
 def enforce_patient_scope(
     request: Request, db: Session = Depends(get_db),
     user=Depends(get_current_user),
