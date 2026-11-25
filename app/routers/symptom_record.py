@@ -28,6 +28,7 @@ MEASUREMENTS = ("calidad_sueno", "estado_animo", "apetito", "nivel_dolor", "temp
     "/patients/{patient_id}",
     response_model=SymptomRecordResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Registrar síntomas"
 )
 def create_symptom_record(
     patient_id: int,
@@ -61,7 +62,8 @@ def create_symptom_record(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[SymptomRecordResponse]
+    response_model=list[SymptomRecordResponse],
+    summary="Historial de síntomas"
 )
 def get_patient_symptoms(
     patient_id: int,
@@ -82,7 +84,8 @@ def get_patient_symptoms(
 
 @router.get(
     "/{symptom_id}",
-    response_model=SymptomRecordResponse
+    response_model=SymptomRecordResponse,
+    summary="Consultar registro"
 )
 def get_symptom_record(
     symptom_id: int,
@@ -94,7 +97,8 @@ def get_symptom_record(
 
 @router.put(
     "/{symptom_id}",
-    response_model=SymptomRecordResponse
+    response_model=SymptomRecordResponse,
+    summary="Corregir registro"
 )
 def update_symptom_record(
     symptom_id: int,
@@ -122,7 +126,9 @@ def update_symptom_record(
     return record
 
 
-@router.delete("/{symptom_id}")
+@router.delete("/{symptom_id}",
+    summary="Desactivar registro"
+)
 def delete_symptom_record(
     symptom_id: int,
     db: Session = Depends(get_db),
