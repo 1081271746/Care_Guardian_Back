@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.access import require_patient, require_record
+from app.core.dependencies import get_current_user
+from app.core.time import local_today
 from app.database.connection import get_db
 from app.models.appointment import Appointment
-from app.models.patient import Patient
 from app.models.user import User
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
     AppointmentResponse
 )
-from app.core.dependencies import get_current_user
 
 
 router = APIRouter(
@@ -18,10 +19,13 @@ router = APIRouter(
     tags=["Appointments"]
 )
 
+NOT_FOUND = "Cita no encontrada"
+
 
 @router.post(
     "/patients/{patient_id}",
-    response_model=AppointmentResponse
+    response_model=AppointmentResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_appointment(
     patient_id: int,
@@ -29,31 +33,15 @@ def create_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id, active=True)
 
-    if patient is None:
+    if appointment_data.estado == "pendiente" and appointment_data.fecha < local_today():
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
+            status_code=422,
+            detail="Una cita pendiente no puede programarse en una fecha pasada",
         )
 
-    if not patient.activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El paciente está inactivo"
-        )
-
-    new_appointment = Appointment(
-        patient_id=patient_id,
-        titulo=appointment_data.titulo,
-        especialidad=appointment_data.especialidad,
-        profesional=appointment_data.profesional,
-        fecha=appointment_data.fecha,
-        hora=appointment_data.hora,
-        lugar=appointment_data.lugar,
-        estado=appointment_data.estado,
-        notas=appointment_data.notas
-    )
+    new_appointment = Appointment(patient_id=patient_id, **appointment_data.model_dump())
 
     db.add(new_appointment)
     db.commit()
@@ -68,25 +56,20 @@ def create_appointment(
 )
 def get_patient_appointments(
     patient_id: int,
+    proximas: bool = Query(False, description="Solo citas desde hoy (zona APP_TIMEZONE), no canceladas"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id)
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
+    query = db.query(Appointment).filter(Appointment.patient_id == patient_id)
+    if proximas:
+        query = query.filter(
+            Appointment.fecha >= local_today(),
+            Appointment.estado != "cancelada",
         )
 
-    appointments = db.query(Appointment).filter(
-        Appointment.patient_id == patient_id
-    ).order_by(
-        Appointment.fecha,
-        Appointment.hora
-    ).all()
-
-    return appointments
+    return query.order_by(Appointment.fecha, Appointment.hora, Appointment.id).all()
 
 
 @router.get(
@@ -98,15 +81,7 @@ def get_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = db.get(Appointment, appointment_id)
-
-    if appointment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cita no encontrada"
-        )
-
-    return appointment
+    return require_record(db, current_user, Appointment, appointment_id, not_found=NOT_FOUND)
 
 
 @router.put(
@@ -119,37 +94,15 @@ def update_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = db.get(Appointment, appointment_id)
+    appointment = require_record(db, current_user, Appointment, appointment_id, not_found=NOT_FOUND)
+    changes = appointment_data.model_dump(exclude_unset=True)
 
-    if appointment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cita no encontrada"
-        )
+    for required in ("titulo", "especialidad", "profesional", "fecha", "hora", "estado"):
+        if required in changes and changes[required] is None:
+            raise HTTPException(status_code=422, detail=f"El campo {required} no puede quedar vacío")
 
-    if appointment_data.titulo is not None:
-        appointment.titulo = appointment_data.titulo
-
-    if appointment_data.especialidad is not None:
-        appointment.especialidad = appointment_data.especialidad
-
-    if appointment_data.profesional is not None:
-        appointment.profesional = appointment_data.profesional
-
-    if appointment_data.fecha is not None:
-        appointment.fecha = appointment_data.fecha
-
-    if appointment_data.hora is not None:
-        appointment.hora = appointment_data.hora
-
-    if appointment_data.lugar is not None:
-        appointment.lugar = appointment_data.lugar
-
-    if appointment_data.estado is not None:
-        appointment.estado = appointment_data.estado
-
-    if appointment_data.notas is not None:
-        appointment.notas = appointment_data.notas
+    for field, value in changes.items():
+        setattr(appointment, field, value)
 
     db.commit()
     db.refresh(appointment)
@@ -163,13 +116,7 @@ def delete_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = db.get(Appointment, appointment_id)
-
-    if appointment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cita no encontrada"
-        )
+    appointment = require_record(db, current_user, Appointment, appointment_id, not_found=NOT_FOUND)
 
     db.delete(appointment)
     db.commit()
