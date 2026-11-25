@@ -73,9 +73,27 @@ async def lifespan(app):
     engine.dispose()
 
 
+OPENAPI_TAGS = [
+    {"name": "Authentication", "description": "Inicio de sesión (JWT) y perfil del usuario autenticado."},
+    {"name": "Users", "description": "Registro y gestión de la cuenta propia."},
+    {"name": "Patients", "description": "Pacientes asignados y su equipo de cuidado."},
+    {"name": "Medications", "description": "Medicamentos registrados por paciente (no son prescripciones)."},
+    {"name": "Appointments", "description": "Citas médicas programadas."},
+    {"name": "Symptoms", "description": "Registros de síntomas y mediciones; generan alertas por reglas."},
+    {"name": "Caregiver Notes", "description": "Observaciones del cuidador; generan alertas por reglas."},
+    {"name": "Alerts", "description": "Alertas automáticas y manuales con su ciclo de estados."},
+    {"name": "Analysis", "description": "Análisis determinista (sin IA) de los últimos síntomas."},
+    {"name": "Dashboard", "description": "Indicadores calculados en PostgreSQL."},
+    {"name": "Evolution", "description": "Estadísticas históricas y resúmenes con Groq bajo consentimiento."},
+]
+
 app = FastAPI(
     title="CareGuardian API",
-    description="Sistema de acompañamiento para cuidadores de adultos mayores",
+    description=(
+        "Sistema de acompañamiento para cuidadores de adultos mayores. "
+        "La información es de apoyo al seguimiento y no constituye diagnóstico médico."
+    ),
+    openapi_tags=OPENAPI_TAGS,
     version="1.1.0",
     lifespan=lifespan
 )
