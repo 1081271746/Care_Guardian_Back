@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
+
+from app.core.access import assigned_patient_ids, require_patient
 
 from app.models.patient_caregiver import PatientCaregiver
 from app.schemas.caregiver import CaregiverAssignmentCreate
@@ -61,14 +64,24 @@ def create_patient(
 
 @router.get("/", response_model=list[PatientResponse])
 def get_patients(
+    q: str | None = Query(None, max_length=100, description="Buscar por nombre o documento"),
+    activos: bool | None = Query(None, description="Filtrar por estado"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patients = db.query(Patient).join(PatientCaregiver).filter(
-        PatientCaregiver.user_id == current_user.id
-    ).distinct().all()
-
-    return patients
+    query = db.query(Patient).filter(
+        Patient.id.in_(assigned_patient_ids(db, current_user))
+    )
+    if activos is not None:
+        query = query.filter(Patient.activo.is_(activos))
+    if q and q.strip():
+        term = f"%{q.strip().lower()}%"
+        query = query.filter(or_(
+            func.lower(Patient.nombres).like(term),
+            func.lower(Patient.apellidos).like(term),
+            func.lower(Patient.documento).like(term),
+        ))
+    return query.order_by(Patient.apellidos.asc(), Patient.nombres.asc(), Patient.id.asc()).all()
 
 
 @router.get("/{patient_id}", response_model=PatientResponse)
