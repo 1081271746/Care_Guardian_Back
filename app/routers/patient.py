@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.access import assigned_patient_ids, require_patient
 
 from app.models.patient_caregiver import PatientCaregiver
-from app.schemas.caregiver import CaregiverAssignmentCreate
+from app.schemas.caregiver import CaregiverAssignmentCreate, CaregiverResponse
 from app.database.connection import get_db
 from app.models.patient import Patient
 from app.schemas.patient import (
@@ -142,27 +142,24 @@ def delete_patient(
     }
 
 
-@router.post("/{patient_id}/caregivers")
+@router.post("/{patient_id}/caregivers", status_code=status.HTTP_201_CREATED)
 def assign_caregiver(
     patient_id: int,
     assignment: CaregiverAssignmentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id, active=True)
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    user = db.get(User, assignment.user_id)
+    if assignment.email is not None:
+        user = db.query(User).filter(func.lower(User.email) == assignment.email).first()
+    else:
+        user = db.get(User, assignment.user_id)
 
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
+            detail="No existe un usuario con esos datos"
         )
 
     if not user.activo:
@@ -173,18 +170,18 @@ def assign_caregiver(
 
     existing_assignment = db.query(PatientCaregiver).filter(
         PatientCaregiver.patient_id == patient_id,
-        PatientCaregiver.user_id == assignment.user_id
+        PatientCaregiver.user_id == user.id
     ).first()
 
     if existing_assignment:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="El usuario ya está asignado a este paciente"
         )
 
     new_assignment = PatientCaregiver(
         patient_id=patient_id,
-        user_id=assignment.user_id,
+        user_id=user.id,
         rol=assignment.rol
     )
 
@@ -204,38 +201,42 @@ def assign_caregiver(
     }
 
 
-@router.get("/{patient_id}/caregivers")
+@router.get("/{patient_id}/caregivers", response_model=list[CaregiverResponse])
 def get_patient_caregivers(
     patient_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
-
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
+    require_patient(db, current_user, patient_id)
 
     caregivers = (
         db.query(PatientCaregiver, User)
-        .join(
-            User,
-            PatientCaregiver.user_id == User.id
-        )
-        .filter(
-            PatientCaregiver.patient_id == patient_id
-        )
+        .join(User, PatientCaregiver.user_id == User.id)
+        .filter(PatientCaregiver.patient_id == patient_id)
+        .order_by(PatientCaregiver.fecha_asignacion.asc(), PatientCaregiver.id.asc())
         .all()
     )
 
     return [
-        {
-            "user_id": user.id,
-            "nombre": user.nombre,
-            "email": user.email,
-            "rol": assignment.rol
-        }
+        CaregiverResponse(user_id=user.id, nombre=user.nombre, email=user.email, rol=assignment.rol)
         for assignment, user in caregivers
     ]
+
+
+@router.delete("/{patient_id}/caregivers/{user_id}")
+def remove_caregiver(
+    patient_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_patient(db, current_user, patient_id)
+    assignments = db.query(PatientCaregiver).filter(PatientCaregiver.patient_id == patient_id).all()
+    target = next((a for a in assignments if a.user_id == user_id), None)
+    if target is None:
+        raise HTTPException(status_code=404, detail="El usuario no está asignado a este paciente")
+    if len(assignments) == 1:
+        raise HTTPException(status_code=409, detail="El paciente debe conservar al menos un cuidador")
+    db.delete(target)
+    db.commit()
+    return {"mensaje": "Cuidador desasignado correctamente"}
