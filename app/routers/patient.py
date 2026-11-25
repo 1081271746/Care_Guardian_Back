@@ -20,32 +20,26 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=PatientResponse)
+def document_taken(db: Session, documento: str, *, exclude_id: int | None = None) -> bool:
+    query = db.query(Patient.id).filter(Patient.documento == documento)
+    if exclude_id is not None:
+        query = query.filter(Patient.id != exclude_id)
+    return query.first() is not None
+
+
+@router.post("/", response_model=PatientResponse, status_code=status.HTTP_201_CREATED)
 def create_patient(
     patient_data: PatientCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    existing_patient = db.query(Patient).filter(
-        Patient.documento == patient_data.documento
-    ).first()
-
-    if existing_patient:
+    if document_taken(db, patient_data.documento):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Ya existe un paciente con ese documento"
         )
 
-    new_patient = Patient(
-        nombres=patient_data.nombres,
-        apellidos=patient_data.apellidos,
-        fecha_nacimiento=patient_data.fecha_nacimiento,
-        documento=patient_data.documento,
-        telefono=patient_data.telefono,
-        direccion=patient_data.direccion,
-        contacto_emergencia=patient_data.contacto_emergencia,
-        telefono_emergencia=patient_data.telefono_emergencia
-    )
+    new_patient = Patient(**patient_data.model_dump())
 
     db.add(new_patient)
     db.flush()

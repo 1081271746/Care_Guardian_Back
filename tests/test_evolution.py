@@ -138,7 +138,7 @@ def test_new_patient_auto_assignment(env):
     result = client.post("/patients/", headers=headers, json={
         "nombres": "Nuevo", "apellidos": "Prueba", "documento": "TEST-NEW", "fecha_nacimiento": "1950-01-01"
     })
-    assert result.status_code == 200
+    assert result.status_code == 201
     new_id = result.json()["id"]
     assert client.get(f"/evolution/patients/{new_id}", headers=headers).status_code == 200
     assert client.get(f"/evolution/patients/{new_id}", headers=other).status_code == 403
