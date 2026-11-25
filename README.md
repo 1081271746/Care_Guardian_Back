@@ -298,3 +298,85 @@ TEST_DATABASE_URL=postgresql+psycopg://USER@127.0.0.1:5432/careguardian_test \
   migraciones sobre un esquema heredado en PostgreSQL, persistencia tras abrir
   un motor nuevo y la carga de demostración.
 - GitHub Actions (`.github/workflows/tests.yml`) ejecuta migraciones dos veces y la suite en PostgreSQL 16.
+
+## Despliegue en Railway
+
+El servicio se construye con el `Dockerfile` (usuario sin privilegios, `uvicorn`
+con `--proxy-headers`). `railway.toml` define:
+
+- `preDeployCommand = alembic upgrade head` (migraciones aditivas).
+- `healthcheckPath = /health` (falla con 503 si PostgreSQL no responde).
+
+Pasos:
+
+1. En el proyecto de Railway, el servicio PostgreSQL debe mantener su **volumen
+   persistente** (no lo elimines ni lo recrees).
+2. En el servicio del backend, variables:
+   - `DATABASE_URL` = referencia `${{Postgres.DATABASE_URL}}`
+   - `SECRET_KEY` = valor aleatorio de 48+ caracteres (no reutilices uno publicado)
+   - `CORS_ORIGINS` = URL pública del frontend
+   - `GROQ_API_KEY`, `GROQ_MODEL=openai/gpt-oss-20b`
+   - opcionales: `GROQ_TIMEOUT_SECONDS`, `GROQ_REQUESTS_PER_MINUTE`, `APP_TIMEZONE`
+3. Despliega la rama (o fusiona el PR en `main`). Railway construirá la imagen,
+   ejecutará las migraciones y comprobará `/health`.
+4. Verifica: `GET https://<backend>/health` y, con sesión, `GET /evolution/ai-status`.
+5. En el frontend, `API_BASE_URL` debe apuntar a la URL del backend (privada
+   `http://<servicio>.railway.internal:<puerto>` o pública `https://...`).
+
+## Carga segura de datos de demostración
+
+Script: `python -m scripts.seed_demo`. Usa **solo la API HTTP** (los mismos
+endpoints autenticados que el frontend); nunca abre la base de datos ni ejecuta SQL.
+
+Qué crea por defecto (todo ficticio y marcado “(demo)” + un marcador `CG-DEMO-…`):
+
+| Recurso | Cantidad | Detalle |
+|---|---|---|
+| Pacientes | 6 | Asignados automáticamente a la cuenta que ejecuta la carga |
+| Medicamentos | 18 | Suplementos genéricos “(demo)”, sin indicación clínica |
+| Citas | 12 | Próximas, en una sede ficticia |
+| Síntomas | 84 | 14 por paciente, repartidos en las últimas 4 semanas |
+| Notas | 24 | Observaciones cotidianas ficticias |
+| Alertas manuales | 6 | Niveles bajo/medio |
+
+Algunas notas pueden generar alertas automáticas (por ejemplo “durmió poco”),
+igual que en el uso real.
+
+```sh
+# 1) Vista previa: no se conecta a nada
+python -m scripts.seed_demo
+
+# 2) Local
+export SEED_BASE_URL=http://127.0.0.1:8000
+export SEED_EMAIL=carlos@careguardian.com
+export SEED_PASSWORD=CareGuardian123
+python -m scripts.seed_demo --apply --create-account
+
+# 3) Producción (solo con autorización explícita, revisando antes el destino)
+export SEED_BASE_URL=https://<backend>.up.railway.app
+python -m scripts.seed_demo --apply --create-account --confirm-production
+```
+
+- Idempotente: reejecutar con el mismo `--namespace` (por defecto `carlos-demo-v1`)
+  reconcilia los registros existentes y no duplica nada.
+- No borra, modifica ni desactiva datos existentes; solo hace `GET` y `POST`.
+- `--create-account` registra la cuenta mediante `POST /users/` únicamente si el
+  inicio de sesión falla con 401; si el correo existe con otra contraseña, se detiene.
+- Tras la carga relee cada registro mediante una nueva consulta HTTP.
+- Como los datos se guardan a través de la API desplegada, quedan en el
+  PostgreSQL persistente de Railway y siguen ahí después de reiniciar el backend.
+
+Más detalle en [`docs/CARGA_DEMO.md`](docs/CARGA_DEMO.md).
+
+## Seguridad
+
+- Contraseñas con Argon2; mismo coste de verificación para correos inexistentes.
+- JWT HS256 con `exp`, `iat` y `sub` obligatorios.
+- Permisos por paciente en todas las rutas (dependencia global + comprobación explícita).
+- Errores de base de datos traducidos a `409`/`503` sin SQL ni datos.
+- Cabeceras `Cache-Control: private, no-store` y `X-Content-Type-Options: nosniff`.
+- Logs sin cuerpos de Groq, tokens, ni URLs de peticiones salientes.
+- `.env` está ignorado. **Importante:** el historial antiguo del repositorio
+  contiene un `.env` con un `SECRET_KEY` y una contraseña de base de datos de
+  desarrollo. Si alguno de esos valores se usó en Railway, rótalo.
+- La cuenta de demostración es pública por diseño: úsala solo con datos ficticios.
