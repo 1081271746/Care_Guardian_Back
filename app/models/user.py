@@ -1,8 +1,7 @@
 from datetime import datetime
-from sqlalchemy.orm import relationship
 
-from sqlalchemy import Boolean, DateTime, String, null
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.time import utc_now
 from app.database.base import Base
@@ -56,7 +55,3 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-
-
-
-    
