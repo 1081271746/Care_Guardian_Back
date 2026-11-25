@@ -9,6 +9,8 @@ def test_private_headers_on_every_response(env):
     response = client.get("/")
     assert response.headers["cache-control"] == "private, no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["x-frame-options"] == "DENY"
 
 
 def test_cors_preflight_allows_configured_origin_only(env):

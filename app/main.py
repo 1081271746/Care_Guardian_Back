@@ -153,6 +153,8 @@ async def private_responses(request, call_next):
     response = await call_next(request)
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
 
     return response
 
