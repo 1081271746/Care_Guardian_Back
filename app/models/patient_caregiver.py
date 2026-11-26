@@ -1,13 +1,18 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
 class PatientCaregiver(Base):
     __tablename__ = "patient_caregivers"
+    __table_args__ = (
+        Index("uq_patient_caregivers_patient_user", "patient_id", "user_id", unique=True),
+        Index("ix_patient_caregivers_user_id", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -33,7 +38,7 @@ class PatientCaregiver(Base):
     fecha_asignacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     patient = relationship(

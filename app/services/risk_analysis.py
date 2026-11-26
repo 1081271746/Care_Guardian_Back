@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from app.services.text import normalize
+
 
 @dataclass
 class RiskAnalysisResult:
@@ -21,7 +23,7 @@ def analyze_symptoms(symptom) -> RiskAnalysisResult:
         elif symptom.nivel_dolor >= 5:
             score += 2
             factores.append("Dolor moderado")
-        
+
 
     # Temperatura
     if symptom.temperatura is not None:
@@ -43,7 +45,7 @@ def analyze_symptoms(symptom) -> RiskAnalysisResult:
 
     # Apetito
     if symptom.apetito is not None:
-        apetito = symptom.apetito.lower()
+        apetito = normalize(symptom.apetito)
 
         if apetito == "muy bajo":
             score += 2
@@ -54,9 +56,9 @@ def analyze_symptoms(symptom) -> RiskAnalysisResult:
 
     # Estado de ánimo
     if symptom.estado_animo is not None:
-        estado = symptom.estado_animo.lower()
+        estado = normalize(symptom.estado_animo)
 
-        if estado in ["decaído", "decaida", "decaído/a"]:
+        if estado in ["decaido", "decaida", "decaido/a"]:
             score += 2
             factores.append("Estado de ánimo decaído")
         elif estado in ["triste", "ansioso", "ansiosa"]:
@@ -65,7 +67,7 @@ def analyze_symptoms(symptom) -> RiskAnalysisResult:
 
     # Nivel de gravedad registrado por el cuidador
     if symptom.nivel_gravedad is not None:
-        gravedad = symptom.nivel_gravedad.lower()
+        gravedad = normalize(symptom.nivel_gravedad)
 
         if gravedad == "grave":
             score += 3

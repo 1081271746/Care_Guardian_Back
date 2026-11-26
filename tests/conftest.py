@@ -11,14 +11,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
-from app.main import app
+
+from app.core.security import create_access_token, hash_password
 from app.database.base import Base
 from app.database.connection import get_db
-from app.models.user import User
+from app.main import app
 from app.models.patient import Patient
 from app.models.patient_caregiver import PatientCaregiver
 from app.models.symptom_record import SymptomRecord
-from app.core.security import create_access_token, hash_password
+from app.models.user import User
+
 
 class AuthHeaders(dict):
     def __repr__(self):
@@ -43,9 +45,11 @@ def env(monkeypatch):
     with Session(engine) as db:
         a = User(nombre="Cuidador prueba", email="test-a@example.org", password_hash=hash_password(secrets.token_urlsafe()))
         b = User(nombre="Otro cuidador", email="test-b@example.org", password_hash=hash_password(secrets.token_urlsafe()))
-        db.add_all([a, b]); db.flush()
+        db.add_all([a, b])
+        db.flush()
         p = Patient(nombres="Paciente prueba", apellidos="Prueba", fecha_nacimiento=date(1950, 1, 1), documento="TEST-ONLY")
-        db.add(p); db.flush()
+        db.add(p)
+        db.flush()
         db.add(PatientCaregiver(patient_id=p.id, user_id=a.id))
         for day, pain in [(1, 0), (3, 6)]:
             db.add(SymptomRecord(
@@ -61,6 +65,8 @@ def env(monkeypatch):
         other = AuthHeaders(Authorization="Bearer " + create_access_token({"sub": str(b.id)}))
         monkeypatch.setenv("GROQ_API_KEY", secrets.token_urlsafe())
         monkeypatch.setenv("GROQ_MODEL", "openai/gpt-oss-20b")
+        from app.core import throttle
+        throttle.clear_all()
         with TestClient(app) as client:
             yield client, db, p.id, headers, other
         app.dependency_overrides.clear()

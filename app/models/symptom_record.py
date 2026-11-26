@@ -1,8 +1,9 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -16,7 +17,8 @@ class SymptomRecord(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     caregiver_id: Mapped[int] = mapped_column(
@@ -63,7 +65,7 @@ class SymptomRecord(Base):
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     activo: Mapped[bool] = mapped_column(
@@ -71,3 +73,9 @@ class SymptomRecord(Base):
         nullable=False,
         default=True
     )
+
+    registrado_por = relationship("User", lazy="joined", viewonly=True)
+
+    @property
+    def registrado_por_nombre(self) -> str | None:
+        return self.registrado_por.nombre if self.registrado_por is not None else None

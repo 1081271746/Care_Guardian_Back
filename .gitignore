@@ -8,4 +8,6 @@ __pycache__/
 .env.*
 !.env.example
 careguardian_backup.dump
-*.dump
+*.dump*.sql
+.coverage
+htmlcov/
