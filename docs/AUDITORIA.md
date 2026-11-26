@@ -35,7 +35,7 @@
 
 ## Verificación
 
-- 170 pruebas en PostgreSQL 16 local (168 + 2 exclusivas de PostgreSQL en SQLite), cobertura 94 %.
+- 172 pruebas aprobadas en PostgreSQL 16 local (en SQLite: 170 aprobadas y 2 omitidas por ser exclusivas de PostgreSQL), cobertura 94 %.
 - `ruff check .` sin hallazgos.
 - Migraciones aplicadas dos veces sobre una base vacía y sobre un esquema heredado con datos y asignaciones duplicadas (no se borra nada).
 - Carga de demostración ejecutada contra un backend local: creación, segunda

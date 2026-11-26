@@ -308,7 +308,7 @@ TEST_DATABASE_URL=postgresql+psycopg://USER@127.0.0.1:5432/careguardian_test \
 - GitHub Actions (`.github/workflows/tests.yml`) ejecuta `ruff`, migraciones dos
   veces y la suite en PostgreSQL 16 con cobertura mínima del 85 %.
 - Atajos: `make test`, `make coverage`, `ruff check .`.
-- Resultado de esta versión: 170 pruebas aprobadas en PostgreSQL 16, cobertura 94 %.
+- Resultado de esta versión: 172 pruebas aprobadas en PostgreSQL 16 (170 + 2 omitidas en SQLite), cobertura 94 %.
 
 ## Despliegue en Railway
 
