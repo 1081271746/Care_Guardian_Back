@@ -13,6 +13,19 @@ from app.services.groq_analysis import generate_analysis
 
 router = APIRouter(prefix="/evolution", tags=["Evolution"])
 
+@router.get("/ai-status")
+def get_ai_status(user=Depends(get_current_user)):
+    model = os.getenv("GROQ_MODEL", "").strip()
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    limit = max(1, int(os.getenv("GROQ_REQUESTS_PER_MINUTE", "10")))
+
+    return {
+        "configurado": bool(api_key and model),
+        "proveedor": "Groq",
+        "modelo": model or None,
+        "limite_por_minuto": limit,
+        "version_consentimiento": CONSENT_VERSION,
+    }
 
 def period_query(desde: date | None = None, hasta: date | None = None):
     if desde and hasta and desde > hasta:
