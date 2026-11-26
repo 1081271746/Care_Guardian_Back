@@ -1,8 +1,9 @@
-from datetime import date, time, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, Time
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -16,7 +17,8 @@ class Appointment(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     titulo: Mapped[str] = mapped_column(
@@ -63,5 +65,5 @@ class Appointment(Base):
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )

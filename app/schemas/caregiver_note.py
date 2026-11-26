@@ -1,32 +1,34 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.common import PastTimestamp, Text
 
 
 class CaregiverNoteCreate(BaseModel):
-    contenido: str = Field(
-        min_length=5,
-        max_length=5000
+    model_config = ConfigDict(extra="forbid")
+
+    contenido: Text(5000, min_length=5)
+    fecha_registro: PastTimestamp = Field(
+        default=None,
+        description="Momento de la observación; por defecto, ahora. No puede ser futuro.",
     )
 
 
 class CaregiverNoteUpdate(BaseModel):
-    contenido: str | None = Field(
-        default=None,
-        min_length=5,
-        max_length=5000
-    )
+    model_config = ConfigDict(extra="forbid")
 
+    contenido: Text(5000, min_length=5) | None = None
     activo: bool | None = None
 
 
 class CaregiverNoteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     patient_id: int
     caregiver_id: int
     contenido: str
     fecha_registro: datetime
     activo: bool
-
-    class Config:
-        from_attributes = True
+    autor_nombre: str | None = None

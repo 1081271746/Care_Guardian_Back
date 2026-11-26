@@ -1,28 +1,35 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
-from app.core.security import SECRET_KEY, ALGORITHM
+from app.core.security import ALGORITHM, SECRET_KEY, credential_fingerprint
 from app.database.connection import get_db
 from app.models.user import User
 
-from sqlalchemy.orm import Session
+security = HTTPBearer(auto_error=False)
 
-
-security = HTTPBearer()
+UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db)
 ):
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inicia sesión para continuar",
+            headers=UNAUTHORIZED_HEADERS,
+        )
     token = credentials.credentials
 
     try:
         payload = jwt.decode(
             token,
             SECRET_KEY,
-            algorithms=[ALGORITHM]
+            algorithms=[ALGORITHM],
+            options={"require": ["exp", "sub"]},
         )
 
         user_id = payload.get("sub")
@@ -30,24 +37,41 @@ def get_current_user(
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token inválido"
+                detail="Token inválido",
+                headers=UNAUTHORIZED_HEADERS,
             )
 
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tu sesión expiró; inicia sesión nuevamente",
+            headers=UNAUTHORIZED_HEADERS,
+        ) from None
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido o expirado"
-        )
+            detail="Token inválido o expirado",
+            headers=UNAUTHORIZED_HEADERS,
+        ) from None
 
     try:
         user = db.get(User, int(user_id))
     except (TypeError, ValueError):
-        raise HTTPException(status_code=401, detail="Token inválido")
+        raise HTTPException(status_code=401, detail="Token inválido", headers=UNAUTHORIZED_HEADERS) from None
 
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado"
+            detail="Usuario no encontrado",
+            headers=UNAUTHORIZED_HEADERS,
+        )
+
+    fingerprint = payload.get("pwd")
+    if fingerprint is not None and fingerprint != credential_fingerprint(user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tu contraseña cambió; inicia sesión nuevamente",
+            headers=UNAUTHORIZED_HEADERS,
         )
 
     if not user.activo:

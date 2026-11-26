@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -16,7 +17,8 @@ class Alert(Base):
 
     patient_id: Mapped[int] = mapped_column(
         ForeignKey("patients.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
     symptom_id: Mapped[int | None] = mapped_column(
@@ -66,7 +68,7 @@ class Alert(Base):
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     activa: Mapped[bool] = mapped_column(

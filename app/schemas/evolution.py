@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CONSENT_VERSION = "groq-minimized-v1"
@@ -23,6 +24,7 @@ class Period(BaseModel):
 class AnalysisRequest(Period):
     consentimiento: Literal[True]
     version_consentimiento: Literal["groq-minimized-v1"]
+    zona: str | None = Field(default=None, max_length=64)
 
 
 class AISelection(BaseModel):

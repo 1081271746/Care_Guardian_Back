@@ -22,7 +22,7 @@ def test_seed_creates_related_records_through_real_routes_and_survives_rerun(env
     assert all(second[key]["verified"] == 2 for key in counts)
     from app.models.patient import Patient
     from app.models.symptom_record import SymptomRecord
-    patients = db.query(Patient).filter(Patient.nombres == "Paciente ficticio").all()
+    patients = db.query(Patient).filter(Patient.documento.like("CG-DEMO-%")).all()
     assert len(patients) == 2
     for patient in patients:
         result = http.get(f"/evolution/patients/{patient.id}", headers=headers)

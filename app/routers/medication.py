@@ -1,27 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.access import require_patient, require_record
+from app.core.dependencies import get_current_user
 from app.database.connection import get_db
 from app.models.medication import Medication
-from app.models.patient import Patient
 from app.models.user import User
-from app.schemas.medication import (
-    MedicationCreate,
-    MedicationUpdate,
-    MedicationResponse
-)
-from app.core.dependencies import get_current_user
-
+from app.schemas.medication import MedicationCreate, MedicationResponse, MedicationUpdate
 
 router = APIRouter(
     prefix="/medications",
     tags=["Medications"]
 )
 
+NOT_FOUND = "Medicamento no encontrado"
+
 
 @router.post(
     "/patients/{patient_id}",
-    response_model=MedicationResponse
+    response_model=MedicationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar medicamento"
 )
 def create_medication(
     patient_id: int,
@@ -29,30 +28,9 @@ def create_medication(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id, active=True)
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-
-    if not patient.activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El paciente está inactivo"
-        )
-
-    new_medication = Medication(
-        patient_id=patient_id,
-        nombre=medication_data.nombre,
-        dosis=medication_data.dosis,
-        frecuencia=medication_data.frecuencia,
-        hora=medication_data.hora,
-        fecha_inicio=medication_data.fecha_inicio,
-        fecha_fin=medication_data.fecha_fin,
-        indicaciones=medication_data.indicaciones
-    )
+    new_medication = Medication(patient_id=patient_id, **medication_data.model_dump())
 
     db.add(new_medication)
     db.commit()
@@ -63,51 +41,43 @@ def create_medication(
 
 @router.get(
     "/patients/{patient_id}",
-    response_model=list[MedicationResponse]
+    response_model=list[MedicationResponse],
+    summary="Medicamentos del paciente"
 )
 def get_patient_medications(
     patient_id: int,
+    activos: bool | None = Query(None, description="true: solo activos; false: solo suspendidos"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    patient = db.get(Patient, patient_id)
+    require_patient(db, current_user, patient_id)
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
+    query = db.query(Medication).filter(Medication.patient_id == patient_id)
+    if activos is not None:
+        query = query.filter(Medication.activo.is_(activos))
 
-    medications = db.query(Medication).filter(
-        Medication.patient_id == patient_id
+    return query.order_by(
+        Medication.activo.desc(), Medication.hora.asc(), Medication.nombre.asc(), Medication.id.asc()
     ).all()
-
-    return medications
 
 
 @router.get(
     "/{medication_id}",
-    response_model=MedicationResponse
+    response_model=MedicationResponse,
+    summary="Consultar medicamento"
 )
 def get_medication(
     medication_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    medication = db.get(Medication, medication_id)
-
-    if medication is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Medicamento no encontrado"
-        )
-
-    return medication
+    return require_record(db, current_user, Medication, medication_id, not_found=NOT_FOUND)
 
 
 @router.put(
     "/{medication_id}",
-    response_model=MedicationResponse
+    response_model=MedicationResponse,
+    summary="Actualizar medicamento"
 )
 def update_medication(
     medication_id: int,
@@ -115,37 +85,23 @@ def update_medication(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    medication = db.get(Medication, medication_id)
+    medication = require_record(db, current_user, Medication, medication_id, not_found=NOT_FOUND, active=True)
+    changes = medication_data.model_dump(exclude_unset=True)
 
-    if medication is None:
+    for required in ("nombre", "dosis", "frecuencia", "hora", "fecha_inicio", "activo"):
+        if required in changes and changes[required] is None:
+            raise HTTPException(status_code=422, detail=f"El campo {required} no puede quedar vacío")
+
+    start = changes.get("fecha_inicio", medication.fecha_inicio)
+    end = changes.get("fecha_fin", medication.fecha_fin)
+    if end is not None and end < start:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Medicamento no encontrado"
+            status_code=422,
+            detail="La fecha de finalización no puede ser anterior a la de inicio",
         )
 
-    if medication_data.nombre is not None:
-        medication.nombre = medication_data.nombre
-
-    if medication_data.dosis is not None:
-        medication.dosis = medication_data.dosis
-
-    if medication_data.frecuencia is not None:
-        medication.frecuencia = medication_data.frecuencia
-
-    if medication_data.hora is not None:
-        medication.hora = medication_data.hora
-
-    if medication_data.fecha_inicio is not None:
-        medication.fecha_inicio = medication_data.fecha_inicio
-
-    if medication_data.fecha_fin is not None:
-        medication.fecha_fin = medication_data.fecha_fin
-
-    if medication_data.indicaciones is not None:
-        medication.indicaciones = medication_data.indicaciones
-
-    if medication_data.activo is not None:
-        medication.activo = medication_data.activo
+    for field, value in changes.items():
+        setattr(medication, field, value)
 
     db.commit()
     db.refresh(medication)
@@ -153,23 +109,21 @@ def update_medication(
     return medication
 
 
-@router.delete("/{medication_id}")
+@router.delete("/{medication_id}",
+    summary="Suspender medicamento (conserva el historial)"
+)
 def delete_medication(
     medication_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    medication = db.get(Medication, medication_id)
-
-    if medication is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Medicamento no encontrado"
-        )
-
-    db.delete(medication)
+    """Suspend the medication; the record stays in the patient's history."""
+    medication = require_record(db, current_user, Medication, medication_id, not_found=NOT_FOUND)
+    medication.activo = False
     db.commit()
 
     return {
-        "mensaje": "Medicamento eliminado correctamente"
+        "mensaje": "Medicamento suspendido correctamente",
+        "id": medication.id,
+        "activo": False,
     }

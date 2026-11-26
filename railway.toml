@@ -1,8 +1,11 @@
 [build]
 builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
+# Migrations are additive and idempotent (see migrations/versions); they never drop data.
 preDeployCommand = ["alembic upgrade head"]
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

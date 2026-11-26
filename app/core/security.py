@@ -1,17 +1,33 @@
+import hashlib
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import jwt
-from pwdlib import PasswordHash
 from dotenv import load_dotenv
+from pwdlib import PasswordHash
+
+from app.core.time import utc_now
 
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+
+def _expire_minutes() -> int:
+    try:
+        value = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+    except ValueError:
+        value = 60
+    # Between 5 minutes and 24 hours; long-lived tokens are not revocable.
+    return max(5, min(value, 1440))
+
+
+ACCESS_TOKEN_EXPIRE_MINUTES = _expire_minutes()
 
 password_hash = PasswordHash.recommended()
+# Used to spend the same time verifying when the e-mail does not exist.
+_DUMMY_HASH = password_hash.hash("careguardian-timing-equalizer")
 
 
 def hash_password(password: str) -> str:
@@ -19,20 +35,29 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    return password_hash.verify(password, hashed_password)
+    try:
+        return password_hash.verify(password, hashed_password)
+    except Exception:
+        # A corrupted or legacy hash must not become a 500 on login.
+        return False
 
 
-def create_access_token(data: dict):
+def spend_password_check(password: str) -> None:
+    verify_password(password, _DUMMY_HASH)
+
+
+def credential_fingerprint(password_hash_value: str) -> str:
+    """Short digest of the stored hash: tokens die when the password changes."""
+    return hashlib.sha256(f"{SECRET_KEY}:{password_hash_value}".encode()).hexdigest()[:16]
+
+
+def create_access_token(data: dict) -> str:
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY no está configurada")
+    now = utc_now()
     to_encode = data.copy()
-
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    to_encode.update({"exp": expire})
-
-    return jwt.encode(
-        to_encode,
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
+    to_encode.update({
+        "iat": now,
+        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    })
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

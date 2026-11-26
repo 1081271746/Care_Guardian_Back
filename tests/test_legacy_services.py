@@ -1,7 +1,8 @@
-from app.services.historical_analysis import analyze_patient_history
-from app.services.risk_analysis import analyze_symptoms
-from app.services.note_analysis import analyze_caregiver_note
 from types import SimpleNamespace
+
+from app.services.historical_analysis import analyze_patient_history
+from app.services.note_analysis import analyze_caregiver_note
+from app.services.risk_analysis import analyze_symptoms
 
 
 def test_original_historical_rules():

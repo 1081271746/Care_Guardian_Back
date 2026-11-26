@@ -1,9 +1,9 @@
 from datetime import date, datetime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sqlalchemy import Boolean, Date, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.time import utc_now
 from app.database.base import Base
 
 
@@ -66,7 +66,7 @@ class Patient(Base):
     fecha_registro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow
+        default=utc_now
     )
 
     relaciones_cuidadores = relationship(

@@ -1,13 +1,15 @@
 import json
 from datetime import date
+
 import httpx
 import pytest
-from app.schemas.patient import PatientCreate
-from app.schemas.medication import MedicationCreate
-from app.schemas.appointment import AppointmentCreate
-from app.schemas.symptom_record import SymptomRecordCreate
-from app.schemas.caregiver_note import CaregiverNoteCreate
+
 from app.schemas.alert import AlertCreate
+from app.schemas.appointment import AppointmentCreate
+from app.schemas.caregiver_note import CaregiverNoteCreate
+from app.schemas.medication import MedicationCreate
+from app.schemas.patient import PatientCreate
+from app.schemas.symptom_record import SymptomRecordCreate
 from scripts.seed_demo import main
 from scripts.seed_http import SeedClient, SeedError, validate_url
 from scripts.seed_payloads import DEFAULT_COUNTS, patient_payload, resource_payload
@@ -115,3 +117,47 @@ def test_ambiguous_post_transport_failure_is_not_retried():
         assert count == 1
     finally:
         client.close()
+
+
+def test_demo_records_are_labelled_spread_in_time_and_never_future():
+    from datetime import datetime, timezone
+    now = datetime(2026, 11, 25, 15, tzinfo=timezone.utc)
+    stamps = set()
+    for index in range(40):
+        symptom = resource_payload("t", "symptoms", index, date(2026, 11, 25), now)
+        assert symptom["observaciones"].startswith("CG-DEMO-t-symptoms-")
+        moment = datetime.fromisoformat(symptom["fecha_registro"])
+        assert moment < now
+        stamps.add(moment.date())
+    assert len(stamps) >= 14  # enough distinct days for the Evolución charts
+    assert "(demo)" in patient_payload("t", 0)["nombres"]
+    assert "(demo)" in resource_payload("t", "medications", 0)["nombre"]
+    assert "(demo)" in resource_payload("t", "alerts", 0)["titulo"]
+
+
+def test_create_account_registers_only_when_login_fails():
+    calls = []
+    def handle(request):
+        calls.append((request.method, request.url.path))
+        if request.url.path == "/auth/login":
+            return httpx.Response(401 if len(calls) == 1 else 200, json={"access_token": "test-only"})
+        if request.url.path == "/users/":
+            body = json.loads(request.content)
+            assert body["email"] == "demo@example.org" and "rol" not in body
+            return httpx.Response(201, json={"usuario": {"id": 1}})
+        return httpx.Response(404)
+    client = SeedClient("https://example.org", "demo@example.org", "Demo2026",
+                        transport=httpx.MockTransport(handle))
+    try:
+        assert client.ensure_account("Demo") == "created"
+        assert client.ensure_account("Demo") == "existing"
+        assert ("POST", "/users/") in calls and calls.count(("POST", "/users/")) == 1
+    finally:
+        client.close()
+
+
+def test_dry_run_documents_sample_records(capsys):
+    assert main(["--namespace", "preview"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert set(report["examples"]) == {"patients", "medications", "appointments", "symptoms", "notes", "alerts"}
+    assert report["examples"]["symptoms"]["observaciones"].startswith("CG-DEMO-preview-symptoms-0000")
